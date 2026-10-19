@@ -1,7 +1,7 @@
 # AI 集成
 
 > 上级：[文档中心](../README.md) · 架构：[架构与运行时](../01-总览/02-架构与运行时.md)
-> 决策：**表演层（FaceRig/ActingLayer/ReactionLibrary）后置；先接入独立 Go AI 客户端，通过 WebSocket 下发高层控制意图。**
+> 决策：**表演层（HeadAim/ActingLayer/ReactionLibrary）后置；先接入独立 Go AI 客户端，通过 WebSocket 下发高层控制意图。**
 > 本文是 AI 集成的入口；协议细节见 [控制架构与协议](01-控制架构与协议.md)。
 
 ---
@@ -38,7 +38,7 @@ Godot 负责"怎么动"（动画、物理、状态机、渲染），Go 客户端
 | 层级 | 例子 | 谁负责 | 是否采用 |
 |---|---|---|---|
 | 高层意图 | `look_at`、`walk_to`、`emote`、`sleep` | AI 决策，Godot 执行 | **采用** |
-| 参数化动作 | 目标点、速度、表情名 | AI 给参数，Godot 校验 | **采用** |
+| 参数化动作 | 目标点、速度、头部朝向 | AI 给参数，Godot 校验 | **采用** |
 | 逐帧姿态/关节角 | 每 16ms 发 13 根骨角度 | AI 直接控制 | 不采用 |
 | 动作片段 id | 直接播放某个 clip | AI 选片段 | 仅调试 |
 
@@ -152,7 +152,7 @@ type Action struct {
 
 - AI 控制是**并行轨道 A**，依赖 P1 的状态/输入、P3 的物理、P4 的状态机；
 - 不阻塞 P2/P3/P4 的主线；
-- 表演层（P2 的表演性关键帧、P4 的 FaceRig/ReactionLibrary）标记为**后置**，不进入 v1.0 硬验收；
+- 表演层（P2 的表演性关键帧、P4 的 HeadAim/ReactionLibrary）标记为**后置**，不进入 v1.0 硬验收；
 - 版本计划：`v0.5.5-ai`（协议 + Godot AiBridge + Go 客户端骨架 + 模型接口）。
 
 详见 [轨道 A](../00-项目/路线图/轨道A-AI控制桥接.md) 与 [协议](01-控制架构与协议.md)。

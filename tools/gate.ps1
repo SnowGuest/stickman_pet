@@ -328,8 +328,8 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.12') {
-    Fail "appendix 文档版本未更新到 v1.12"
+if ($Appendix -notmatch 'v1\.13') {
+    Fail "appendix 文档版本未更新到 v1.13"
 }
 $Assets = Read-Utf8 (Join-Path $Root "docs/04-表现/04-素材清单.md")
 if ($Assets -notmatch 'sfx_step') {
@@ -348,6 +348,12 @@ $ForbiddenHits += Get-ChildItem (Join-Path $Root "docs") -Recurse -Filter *.md |
 $ForbiddenHits += Select-String -Path (Join-Path $Root "README.md") -Pattern 'Minecraft|Mojang'
 if ($ForbiddenHits.Count -gt 0) {
     Fail "文档仍包含已移除的 Minecraft/Mojang 关键词"
+}
+$FaceHits = @()
+$FaceHits += Get-ChildItem (Join-Path $Root "docs") -Recurse -Filter *.md | Select-String -Pattern 'FaceRig|表情|眼睛|瞳孔|眉毛|眨眼|眼神'
+$FaceHits += Select-String -Path (Join-Path $Root "README.md"),(Join-Path $Root "CHANGELOG.md") -Pattern 'FaceRig|表情|眼睛|瞳孔|眉毛|眨眼|眼神'
+if ($FaceHits.Count -gt 0) {
+    Fail "文档仍包含面部/表情相关内容"
 }
 $Activities = Read-Utf8 (Join-Path $Root "docs/05-行为/03-内置行为清单.md")
 if ($Activities -notmatch 'B10') {
