@@ -45,7 +45,8 @@ func _submit_full() -> void:
 	DisplayServer.window_set_mouse_passthrough(region)
 
 
-func tick(dt: float, definition: RigDefinition, pose: RigPose) -> void:
+func tick(dt: float, definition: RigDefinition, pose: RigPose,
+		render_scale: float = 1.0) -> void:
 	if not enabled or definition == null or pose == null:
 		return
 	if _locked:
@@ -54,7 +55,7 @@ func tick(dt: float, definition: RigDefinition, pose: RigPose) -> void:
 	if _acc < 1.0 / HZ:
 		return
 	_acc = 0.0
-	var region := build_region(definition, pose)
+	var region := build_region(definition, pose, render_scale)
 	if region.size() < 3:
 		return
 	var bounds := _bounds(region)
@@ -66,24 +67,27 @@ func tick(dt: float, definition: RigDefinition, pose: RigPose) -> void:
 	DisplayServer.window_set_mouse_passthrough(region)
 
 
-func build_region(definition: RigDefinition, pose: RigPose) -> PackedVector2Array:
+func build_region(definition: RigDefinition, pose: RigPose,
+		render_scale: float = 1.0) -> PackedVector2Array:
 	var points := PackedVector2Array()
 	for bone in definition.bones:
 		if bone.id == &"foot_l" or bone.id == &"foot_r":
 			continue
-		var a := pose.joint_pos[bone.start_idx]
-		var b := pose.joint_pos[bone.end_idx]
-		var radius := bone.width * 0.5 + 3.0
+		var a := _visual_joint(pose, bone.start_idx, render_scale)
+		var b := _visual_joint(pose, bone.end_idx, render_scale)
+		var radius := (bone.width * 0.5 + 3.0) * render_scale
 		for k in 6:
 			var offset := Vector2.from_angle(TAU * k / 6.0) * radius
 			points.append(a + offset)
 			points.append(b + offset)
 	var neck_index := int(definition.joint_index.get(&"neck_top", -1))
 	if neck_index >= 0:
-		var head := pose.joint_pos[neck_index] + Vector2(0.0, -definition.head_radius)
-		for k in 12:
-			points.append(head + Vector2.from_angle(TAU * k / 12.0)
-					* (definition.head_radius + 3.0))
+		var neck := _visual_joint(pose, neck_index, render_scale)
+		var head := neck + Vector2(0.0, -definition.head_radius * render_scale)
+		var head_radius := (definition.head_radius + 3.0) * render_scale
+		for k in 16:
+			points.append(head + Vector2.from_angle(TAU * k / 16.0)
+					* head_radius)
 	if points.size() < 3:
 		return PackedVector2Array()
 	var hull := Geometry2D.convex_hull(points)
@@ -91,8 +95,12 @@ func build_region(definition: RigDefinition, pose: RigPose) -> PackedVector2Arra
 		return PackedVector2Array()
 	if not Geometry2D.is_polygon_clockwise(hull):
 		hull.reverse()
-	var grown := Geometry2D.offset_polygon(hull, 3.0)
+	var grown := Geometry2D.offset_polygon(hull, 3.0 * render_scale)
 	return grown[0] if grown.size() > 0 else hull
+
+
+func _visual_joint(pose: RigPose, index: int, render_scale: float) -> Vector2:
+	return pose.root_pos + (pose.joint_pos[index] - pose.root_pos) * render_scale
 
 
 func _bounds(region: PackedVector2Array) -> Rect2:

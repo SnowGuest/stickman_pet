@@ -199,6 +199,12 @@ func _test_passthrough() -> void:
 	_check(region.size() >= 3, "passthrough hull generated")
 	var chest := definition.joint_pos(pose, &"chest")
 	_check(Geometry2D.is_point_in_polygon(chest, region), "passthrough contains chest")
+	var scaled := service.build_region(definition, pose, 1.5)
+	var neck := definition.joint_pos(pose, &"neck_top")
+	var head_top := pose.root_pos + (neck - pose.root_pos) * 1.5 \
+			+ Vector2(0.0, -(definition.head_radius + 2.0) * 1.5)
+	_check(Geometry2D.is_point_in_polygon(head_top, scaled),
+			"passthrough contains scaled head")
 	service.free()
 
 

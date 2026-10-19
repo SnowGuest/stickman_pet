@@ -59,7 +59,7 @@ func _ready() -> void:
 	passthrough = PassthroughService.new()
 	add_child(passthrough)
 	passthrough.setup(not no_passthrough and not debug_mode)
-	passthrough.tick(1.0 / 30.0, definition, pose)
+	passthrough.tick(1.0 / 30.0, definition, pose, renderer.get_view_scale())
 
 	debug = DebugOverlay.new()
 	add_child(debug)
@@ -194,7 +194,7 @@ func _process(dt: float) -> void:
 		_apply_layout()
 	shell.poll(dt)
 	if passthrough != null:
-		passthrough.tick(dt, definition, pose)
+		passthrough.tick(dt, definition, pose, renderer.get_view_scale())
 
 
 func _apply_layout() -> void:
@@ -211,7 +211,7 @@ func _apply_layout() -> void:
 		grab_probe.refresh_target()
 	if passthrough != null:
 		passthrough.unlock()
-		passthrough.tick(0.0, definition, pose)
+		passthrough.tick(0.0, definition, pose, renderer.get_view_scale())
 
 
 func _notification(what: int) -> void:
@@ -268,7 +268,8 @@ func _open_context_menu(local: Vector2) -> void:
 
 
 func _is_over_pet(local: Vector2) -> bool:
-	var region := passthrough.build_region(definition, pose)
+	var region := passthrough.build_region(definition, pose,
+			renderer.get_view_scale())
 	return region.size() >= 3 and Geometry2D.is_point_in_polygon(local, region)
 
 
