@@ -86,7 +86,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full -Releas
 | 渲染层/主题/字体 | `docs/04-表现/*` 与 `assets` 说明 |
 | 行为状态/交互 | `docs/05-行为/01` |
 | 配置键/迁移 | `docs/06-工程/01` |
-| 发布/CI/门禁 | `docs/06-工程/02`、`03`、`04` |
+| 发布/CI/门禁 | `docs/06-工程/02`、`03`、`04`、`05` |
 | 里程碑/进度 | `docs/00-项目/02` |
 | 架构决策 | `docs/01-总览/02` 的 ADR 索引 + 对应领域文档 |
 
@@ -136,3 +136,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full -Releas
 - **文档与实现冲突**：以文档为契约；若文档过时，先修文档并说明原因。
 - **环境缺失**（Godot/模板/网络）：记录到路线图"阻塞"，继续可做的部分。
 - **不确定的架构改动**：先写 ADR 草稿，不要直接改数据所有权或发布流程。
+
+---
+
+## 10. 外部参考
+
+本项目规范对照了 Godot 官方文档与成熟开源项目，取舍记录在 [行业实践对照](docs/06-工程/05-行业实践对照.md)：
+
+- [Godot Project organization](https://docs.godotengine.org/en/stable/tutorials/best_practices/project_organization.html)
+- [Godot Version control systems](https://docs.godotengine.org/en/stable/tutorials/best_practices/version_control_systems.html)
+- [Godot GDScript style guide](https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/gdscript_styleguide.html)
+- [Pixelorama CONTRIBUTING](https://github.com/Orama-Interactive/Pixelorama/blob/master/CONTRIBUTING.md)
+- [abarichello/godot-ci](https://github.com/abarichello/godot-ci)
+- [gdUnit4 CI](https://godot-gdunit-labs.github.io/gdUnit4/latest/faq/ci/)
+
+参考不等于照搬：与本项目 ADR 冲突时，以本项目文档为准，并在对照表里写明原因。

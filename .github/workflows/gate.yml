@@ -5,10 +5,19 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   static-gate:
     name: Static project gate
     runs-on: windows-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,6 +29,7 @@ jobs:
   godot-import:
     name: Godot import and tests
     runs-on: windows-latest
+    timeout-minutes: 20
     needs: static-gate
     steps:
       - name: Checkout

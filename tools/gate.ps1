@@ -58,12 +58,16 @@ $RequiredFiles = @(
     "README.md",
     "AGENTS.md",
     "CONTRIBUTING.md",
+    "CHANGELOG.md",
     "LICENSE",
     "project.godot",
     "export_presets.cfg",
+    ".editorconfig",
+    ".github/pull_request_template.md",
     "tools/build_release.ps1",
     "tools/gate.ps1",
     "tools/install_hooks.ps1",
+    "tests/run_tests.gd",
     "assets/fonts/NotoSansSC-Variable.ttf",
     "assets/fonts/OFL.txt",
     "assets/themes/pet_theme.tres",
@@ -88,6 +92,7 @@ $RequiredFiles = @(
     "docs/06-工程/02-规范测试与发布.md",
     "docs/06-工程/03-版本控制与CI.md",
     "docs/06-工程/04-项目门禁.md",
+    "docs/06-工程/05-行业实践对照.md",
     "docs/appendix/01-术语与API.md"
 )
 foreach ($RelPath in $RequiredFiles) {
@@ -247,6 +252,9 @@ foreach ($TrackedPath in $Tracked) {
     if ($TrackedPath -match '(^|/)(\.env|\.env\..*|credentials\.json|secrets?\.(json|yaml|yml|txt))$') {
         Fail "疑似密钥文件被提交：$TrackedPath"
     }
+    if ($TrackedPath -match '(^|/)export_credentials\.cfg$') {
+        Fail "导出凭据文件被提交：$TrackedPath"
+    }
 }
 
 $MissingUid = @()
@@ -258,6 +266,34 @@ foreach ($Gd in ($Tracked | Where-Object { $_ -like "*.gd" })) {
 }
 if ($MissingUid.Count -gt 0) {
     Warn ("以下 GDScript 缺少 .uid（请用编辑器保存一次）：" + ($MissingUid -join ", "))
+}
+
+$TextExtensions = @(".gd", ".ps1", ".sh", ".yml", ".yaml", ".json", ".cfg", ".tres", ".tscn")
+$TextHygieneIssues = @()
+foreach ($TrackedPath in $Tracked) {
+    if ($TrackedPath -match '^addons/') {
+        continue
+    }
+    $Ext = [System.IO.Path]::GetExtension($TrackedPath).ToLowerInvariant()
+    if ($TextExtensions -notcontains $Ext) {
+        continue
+    }
+    $FullPath = Join-Path $Root $TrackedPath
+    if (-not (Test-Path -LiteralPath $FullPath)) {
+        continue
+    }
+    $Lines = [System.IO.File]::ReadAllLines($FullPath, [System.Text.Encoding]::UTF8)
+    for ($i = 0; $i -lt $Lines.Count; $i++) {
+        if ($Lines[$i] -match '[ \t]+$') {
+            $TextHygieneIssues += "${TrackedPath}:$($i + 1) 行尾空白"
+        }
+        if ($Ext -eq ".gd" -and $Lines[$i].Length -gt 100) {
+            $TextHygieneIssues += "${TrackedPath}:$($i + 1) 超过 100 字符"
+        }
+    }
+}
+if ($TextHygieneIssues.Count -gt 0) {
+    Fail ("文本规范问题：`n" + ($TextHygieneIssues -join "`n"))
 }
 
 $HooksPath = ""
@@ -282,8 +318,24 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.3') {
-    Fail "appendix 文档版本未更新到 v1.3"
+if ($Appendix -notmatch 'v1\.4') {
+    Fail "appendix 文档版本未更新到 v1.4"
+}
+$GateDoc = Read-Utf8 (Join-Path $Root "docs/06-工程/04-项目门禁.md")
+if ($GateDoc -notmatch '行业参考') {
+    Fail "项目门禁文档缺少“行业参考”章节"
+}
+$EditorConfig = Read-Utf8 (Join-Path $Root ".editorconfig")
+if ($EditorConfig -notmatch 'charset\s*=\s*utf-8') {
+    Fail ".editorconfig 未声明 charset = utf-8"
+}
+$ChangeLog = Read-Utf8 (Join-Path $Root "CHANGELOG.md")
+if ($ChangeLog -notmatch '## \[Unreleased\]') {
+    Fail "CHANGELOG.md 缺少 ## [Unreleased] 章节"
+}
+$GitAttributes = Read-Utf8 (Join-Path $Root ".gitattributes")
+if ($GitAttributes -notmatch '\* text=auto') {
+    Fail ".gitattributes 缺少 * text=auto"
 }
 
 # ---------------------------------------------------------------- 7. 可选：Godot
@@ -298,19 +350,28 @@ if ($Full) {
         Warn "-Full 已跳过：找不到 Godot 可执行文件"
     } else {
         Write-Host "[gate] Godot 导入…"
-        & $GodotExe --headless --path $Root --import 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            Fail "Godot --import 失败（退出码 $LASTEXITCODE）"
+        $OldEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        $ImportOutput = & $GodotExe --headless --path $Root --import 2>&1
+        $ImportCode = $LASTEXITCODE
+        $ErrorActionPreference = $OldEap
+        $ImportOutput | Out-Null
+        if ($ImportCode -ne 0) {
+            Fail "Godot --import 失败（退出码 $ImportCode）"
         }
 
         $TestScript = Join-Path $Root "tests/run_tests.gd"
-        if (Test-Path -LiteralPath $TestScript) {
+        if ((Test-Path -LiteralPath $TestScript) -and $ImportCode -eq 0) {
             Write-Host "[gate] Godot 测试…"
-            & $GodotExe --headless --path $Root --script "res://tests/run_tests.gd" 2>&1 | Out-Null
-            if ($LASTEXITCODE -ne 0) {
-                Fail "Godot 测试失败（退出码 $LASTEXITCODE）"
+            $ErrorActionPreference = "Continue"
+            $TestOutput = & $GodotExe --headless --path $Root --script "res://tests/run_tests.gd" 2>&1
+            $TestCode = $LASTEXITCODE
+            $ErrorActionPreference = $OldEap
+            $TestOutput | Out-Null
+            if ($TestCode -ne 0) {
+                Fail "Godot 测试失败（退出码 $TestCode）"
             }
-        } else {
+        } elseif (-not (Test-Path -LiteralPath $TestScript)) {
             Warn "-Full：tests/run_tests.gd 不存在，跳过测试"
         }
     }

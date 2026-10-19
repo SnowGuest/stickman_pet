@@ -36,6 +36,10 @@ if ([string]::IsNullOrWhiteSpace($OutDir)) {
 $BuildDir = Join-Path $Root "build"
 $Staging = Join-Path $BuildDir "staging"
 
+# 让 Godot 忽略 build/，避免扫描 staging 里的 project.godot
+New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
+New-Item -ItemType File -Force -Path (Join-Path $BuildDir ".gdignore") | Out-Null
+
 Write-Host "[1/5] 清理 staging: $Staging"
 if (Test-Path -LiteralPath $Staging) {
     Remove-Item -LiteralPath $Staging -Recurse -Force
