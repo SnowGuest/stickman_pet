@@ -2,6 +2,7 @@ class_name DebugOverlay
 extends Node2D
 
 signal palette_cycle
+signal animation_selected(name: StringName)
 
 var definition: RigDefinition
 var pose: RigPose
@@ -27,6 +28,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	match event.keycode:
 		KEY_F1:
 			show_skeleton = not show_skeleton
+		KEY_F2:
+			animation_selected.emit(&"idle")
+		KEY_F3:
+			animation_selected.emit(&"walk")
+		KEY_F4:
+			animation_selected.emit(&"drag_idle")
 		KEY_F6:
 			palette_cycle.emit()
 		KEY_F7:

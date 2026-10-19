@@ -13,6 +13,8 @@ var tray: TrayService
 var global_mouse: GlobalMouse
 var grab_probe: GrabProbe
 var panel: FloatPanel
+var anim_library: AnimLibrary
+var anim_player: AnimPlayer
 var context_menu: PopupMenu
 
 var palette_data: Dictionary = {}
@@ -29,6 +31,10 @@ func _ready() -> void:
 	var no_passthrough := args.has("--no-passthrough")
 	var screenshot_mode := args.has("--screenshot") or args.has("--pet-screenshot")
 	var grab_probe_mode := args.has("--pet-grab-probe")
+	var anim_override := &""
+	for arg in args:
+		if arg.begins_with("--anim="):
+			anim_override = StringName(arg.trim_prefix("--anim="))
 	var dpi_override := 0.0
 	for arg in args:
 		if arg.begins_with("--dpi="):
@@ -53,6 +59,18 @@ func _ready() -> void:
 	renderer.setup(definition, palette_data, PALETTE_ORDER[palette_index],
 			shell.dpi_scale)
 
+	anim_library = AnimLibrary.new()
+	if not anim_library.load_dir("res://assets/anims", definition):
+		push_warning("动画库为空: %s" % str(anim_library.errors))
+	anim_player = AnimPlayer.new()
+	add_child(anim_player)
+	anim_player.setup(definition, anim_library)
+	anim_player.play(&"idle", 0.0)
+	if anim_override != &"":
+		anim_player.play(anim_override, 0.0)
+	anim_player.event_fired.connect(func(event_name: String) -> void:
+		print("[anim] event=", event_name))
+
 	_apply_layout()
 	_last_view_size = get_viewport().get_visible_rect().size
 
@@ -66,6 +84,7 @@ func _ready() -> void:
 	debug.setup(definition, pose, renderer, passthrough)
 	debug.visible = debug_mode
 	debug.palette_cycle.connect(_on_palette_cycle)
+	debug.animation_selected.connect(_on_animation_selected)
 
 	panel = FloatPanel.new()
 	add_child(panel)
@@ -193,6 +212,10 @@ func _process(dt: float) -> void:
 		_last_view_size = view_size
 		_apply_layout()
 	shell.poll(dt)
+	if anim_player != null:
+		anim_player.tick(dt, pose)
+		RigState.resolve(definition, pose)
+		renderer.sync(pose)
 	if passthrough != null:
 		passthrough.tick(dt, definition, pose, renderer.get_view_scale())
 
@@ -205,6 +228,8 @@ func _apply_layout() -> void:
 		return
 	shell.content_size = view_size
 	_place_pet()
+	if anim_player != null:
+		anim_player.apply(pose)
 	RigState.resolve(definition, pose)
 	renderer.sync(pose)
 	if grab_probe != null:
@@ -224,6 +249,12 @@ func _on_palette_cycle() -> void:
 	_set_palette_by_name(PALETTE_ORDER[next])
 
 
+func _on_animation_selected(clip_name: StringName) -> void:
+	if anim_player != null:
+		anim_player.play(clip_name, 0.2)
+		print("[anim] clip=", clip_name)
+
+
 func _set_palette_by_name(palette_name: String) -> void:
 	var index := PALETTE_ORDER.find(palette_name)
 	if index < 0:
@@ -241,6 +272,10 @@ func _on_line_width_changed(value: float) -> void:
 func _build_context_menu() -> void:
 	context_menu.add_item("显示/隐藏", 1)
 	context_menu.add_item("静音", 2)
+	context_menu.add_separator()
+	context_menu.add_item("待机", 10)
+	context_menu.add_item("走路", 11)
+	context_menu.add_item("被抓", 12)
 	context_menu.add_separator()
 	context_menu.add_item("退出", 9)
 
@@ -283,6 +318,12 @@ func _on_context_menu_id(id: int) -> void:
 			_on_tray_command("toggle")
 		2:
 			_on_tray_command("mute")
+		10:
+			_on_animation_selected(&"idle")
+		11:
+			_on_animation_selected(&"walk")
+		12:
+			_on_animation_selected(&"drag_idle")
 		9:
 			get_tree().quit()
 

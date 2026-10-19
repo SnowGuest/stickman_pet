@@ -16,6 +16,7 @@ func _initialize() -> void:
 	_test_audio()
 	_test_rig()
 	_test_fk()
+	_test_animation()
 	_test_passthrough()
 	_test_renderer()
 	_test_taskbar_geometry()
@@ -185,6 +186,76 @@ func _test_fk() -> void:
 	var arm_angle := pose.abs_angle[arm_index]
 	_check(absf(wrapf(arm_angle - deg_to_rad(96.0), -PI, PI)) < 0.001,
 			"FK upper arm angle")
+
+
+func _test_animation() -> void:
+	var definition := RigDefinition.new()
+	definition.load_from_file("res://assets/rigs/stickman.json")
+	definition.compile()
+	var library := AnimLibrary.new()
+	_check(library.load_dir("res://assets/anims", definition), "animation library loads")
+	_check(library.errors.is_empty(), "animation clips validate")
+	_check(library.clips.size() >= 3, "animation clips count")
+	_check(library.get_clip(&"idle") != null, "idle clip")
+	_check(library.get_clip(&"walk") != null, "walk clip")
+	_check(library.get_clip(&"drag_idle") != null, "drag_idle clip")
+
+	var all_finite := true
+	for clip_name in library.names():
+		var clip := library.get_clip(clip_name)
+		var out := PackedFloat32Array()
+		for i in 1000:
+			PoseSampler.sample_rel(clip, definition, clip.length * i / 1000.0, out)
+			for value in out:
+				if is_nan(value) or is_inf(value):
+					all_finite = false
+	_check(all_finite, "1000 samples finite")
+
+	var abs := PackedFloat32Array()
+	abs.resize(definition.bones.size())
+	for i in definition.bones.size():
+		abs[i] = definition.bones[i].rest_abs_deg
+	var rel := PackedFloat32Array()
+	PoseSampler.to_relative(abs, definition, rel)
+	_check(is_equal_approx(rel[0], definition.bones[0].rest_rel),
+			"absolute to relative spine")
+	var forearm_index := -1
+	for i in definition.bones.size():
+		if definition.bones[i].id == &"forearm_l":
+			forearm_index = i
+			break
+	_check(forearm_index >= 0 and is_equal_approx(rel[forearm_index],
+			definition.bones[forearm_index].rest_rel),
+			"absolute to relative forearm")
+
+	var a := PackedFloat32Array([0.0])
+	var b := PackedFloat32Array([PI])
+	var blended := PackedFloat32Array()
+	PoseBlender.crossfade(a, b, 0.5, blended)
+	_check(absf(absf(blended[0]) - PI * 0.5) < 0.001, "crossfade midpoint")
+
+	var invalid := AnimClip.new()
+	var error := invalid.load_from_dict({
+		"name": "bad", "length": 1.0,
+		"tracks": {"nope": [[0.0, 0.0], [1.0, 0.0]]},
+	}, definition)
+	_check(not error.is_empty(), "unknown bone rejected")
+
+	var player := AnimPlayer.new()
+	player.setup(definition, library)
+	player.play(&"idle", 0.0)
+	var pose := definition.create_rest_pose()
+	for i in 40:
+		player.tick(1.0 / 60.0, pose)
+	player.play(&"walk", 0.2)
+	for i in 40:
+		player.tick(1.0 / 60.0, pose)
+	var player_finite := true
+	for value in pose.rel:
+		if is_nan(value) or is_inf(value):
+			player_finite = false
+	_check(player_finite, "crossfade produces finite pose")
+	player.free()
 
 
 func _test_passthrough() -> void:
