@@ -59,6 +59,18 @@ func _test_project_settings() -> void:
 			"viewport height 720")
 	_check(str(_setting("gui/theme/custom", "")) == "res://assets/themes/pet_theme.tres",
 			"global theme")
+	_check(int(_setting("debug/gdscript/warnings/untyped_declaration", -1)) == 1,
+			"warning: untyped declaration")
+	_check(int(_setting("debug/gdscript/warnings/unsafe_property_access", -1)) == 1,
+			"warning: unsafe property")
+	_check(int(_setting("debug/gdscript/warnings/unsafe_method_access", -1)) == 1,
+			"warning: unsafe method")
+	_check(int(_setting("debug/gdscript/warnings/unsafe_cast", -1)) == 1,
+			"warning: unsafe cast")
+	_check(int(_setting("debug/gdscript/warnings/unsafe_call_argument", -1)) == 1,
+			"warning: unsafe call argument")
+	_check(int(_setting("debug/gdscript/warnings/return_value_discarded", -1)) == 1,
+			"warning: discarded return value")
 
 
 func _test_main_scene() -> void:
