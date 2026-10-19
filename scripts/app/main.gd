@@ -88,10 +88,15 @@ func _ready() -> void:
 
 	panel = FloatPanel.new()
 	add_child(panel)
-	panel.setup(renderer.get_stroke_width(), PALETTE_ORDER, palette_index)
+	var anim_names := anim_library.names()
+	var anim_index := maxi(0, anim_names.find(&"idle"))
+	panel.setup(renderer.get_stroke_width(), PALETTE_ORDER, palette_index,
+			anim_names, anim_index)
 	panel.visible = debug_mode
 	panel.line_width_changed.connect(_on_line_width_changed)
 	panel.palette_selected.connect(_set_palette_by_name)
+	panel.animation_selected.connect(_on_animation_selected)
+	panel.animation_time_seek.connect(_on_animation_time_seek)
 	panel.skeleton_toggled.connect(func(enabled: bool) -> void:
 		debug.show_skeleton = enabled)
 
@@ -253,6 +258,18 @@ func _on_animation_selected(clip_name: StringName) -> void:
 	if anim_player != null:
 		anim_player.play(clip_name, 0.2)
 		print("[anim] clip=", clip_name)
+		if panel != null:
+			panel.set_animation_selected(clip_name)
+
+
+func _on_animation_time_seek(normalized: float) -> void:
+	if anim_player == null:
+		return
+	anim_player.seek(normalized)
+	RigState.resolve(definition, pose)
+	renderer.sync(pose)
+	if passthrough != null:
+		passthrough.unlock()
 
 
 func _set_palette_by_name(palette_name: String) -> void:

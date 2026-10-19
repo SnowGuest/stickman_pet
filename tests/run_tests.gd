@@ -233,6 +233,11 @@ func _test_animation() -> void:
 	var blended := PackedFloat32Array()
 	PoseBlender.crossfade(a, b, 0.5, blended)
 	_check(absf(absf(blended[0]) - PI * 0.5) < 0.001, "crossfade midpoint")
+	var add_base := PackedFloat32Array([0.0])
+	var add_value := PackedFloat32Array([0.1])
+	var add_mask := PackedFloat32Array([1.0])
+	PoseBlender.additive(add_base, add_value, add_mask, 0.5)
+	_check(is_equal_approx(add_base[0], 0.05), "additive layer")
 
 	var invalid := AnimClip.new()
 	var error := invalid.load_from_dict({
@@ -255,6 +260,9 @@ func _test_animation() -> void:
 		if is_nan(value) or is_inf(value):
 			player_finite = false
 	_check(player_finite, "crossfade produces finite pose")
+	player.seek(0.5)
+	_check(absf(player.time - player.current.length * 0.5) < 0.001,
+			"animation seek")
 	player.free()
 
 
