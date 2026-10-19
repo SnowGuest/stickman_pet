@@ -1,0 +1,374 @@
+﻿#requires -Version 5.1
+<#
+.SYNOPSIS
+    Stickman Pet 项目门禁：提交/合并前必须通过的静态检查。
+
+.DESCRIPTION
+    默认检查文档、链接、project.godot 不变量、发布排除规则、git 卫生。
+    可选 -Full 运行 Godot 导入与测试；-ReleaseCheck 生成并校验发布 staging。
+
+.PARAMETER Full
+    运行 Godot headless 导入；若存在 tests/run_tests.gd 则运行测试。
+    需要关闭编辑器或确保工程未被占用。
+
+.PARAMETER ReleaseCheck
+    运行 tools/build_release.ps1 -NoExport，并校验 staging 中无 helper / addon / tests。
+
+.PARAMETER GodotExe
+    Godot 可执行文件路径；-Full 时使用。默认尝试本机已知路径。
+
+.EXAMPLE
+    powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1
+
+.EXAMPLE
+    powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full -ReleaseCheck
+#>
+[CmdletBinding()]
+param(
+    [switch]$Full,
+    [switch]$ReleaseCheck,
+    [string]$GodotExe = ""
+)
+
+$ErrorActionPreference = "Stop"
+
+$Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+
+$script:Errors = [System.Collections.Generic.List[string]]::new()
+$script:Warnings = [System.Collections.Generic.List[string]]::new()
+
+function Fail([string]$Message) {
+    $script:Errors.Add($Message) | Out-Null
+}
+function Warn([string]$Message) {
+    $script:Warnings.Add($Message) | Out-Null
+}
+function Read-Utf8([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return ""
+    }
+    return [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8)
+}
+function Get-Relative([string]$Path) {
+    return $Path.Substring($Root.Length).TrimStart('\', '/')
+}
+
+# ---------------------------------------------------------------- 1. 必需文件
+$RequiredFiles = @(
+    "README.md",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "project.godot",
+    "export_presets.cfg",
+    "tools/build_release.ps1",
+    "tools/gate.ps1",
+    "tools/install_hooks.ps1",
+    "assets/fonts/NotoSansSC-Variable.ttf",
+    "assets/fonts/OFL.txt",
+    "assets/themes/pet_theme.tres",
+    "scenes/main.tscn",
+    "docs/README.md",
+    "docs/00-项目/01-项目目标.md",
+    "docs/00-项目/02-路线图与进度.md",
+    "docs/00-项目/03-风险与合规.md",
+    "docs/01-总览/01-产品与边界.md",
+    "docs/01-总览/02-架构与运行时.md",
+    "docs/01-总览/03-Godot工程基线.md",
+    "docs/01-总览/04-内容设计.md",
+    "docs/02-平台/01-窗口与穿透.md",
+    "docs/02-平台/02-输入屏幕与生命周期.md",
+    "docs/03-仿真/01-骨骼与动画.md",
+    "docs/03-仿真/02-物理与抓取.md",
+    "docs/04-表现/01-渲染与2.5D.md",
+    "docs/04-表现/02-3D物品与像素质感.md",
+    "docs/04-表现/03-音频与界面.md",
+    "docs/05-行为/01-状态机与交互.md",
+    "docs/06-工程/01-配置与持久化.md",
+    "docs/06-工程/02-规范测试与发布.md",
+    "docs/06-工程/03-版本控制与CI.md",
+    "docs/06-工程/04-项目门禁.md",
+    "docs/appendix/01-术语与API.md"
+)
+foreach ($RelPath in $RequiredFiles) {
+    $FullPath = Join-Path $Root $RelPath
+    if (-not (Test-Path -LiteralPath $FullPath)) {
+        Fail "缺少必需文件：$RelPath"
+    }
+}
+
+# ---------------------------------------------------------------- 2. Markdown
+$MarkdownFiles = @()
+$MarkdownFiles += Get-ChildItem -LiteralPath $Root -File -Filter "*.md"
+$MarkdownFiles += Get-ChildItem -LiteralPath (Join-Path $Root "docs") -Recurse -File -Filter "*.md"
+
+$LinkPattern = [regex]'\]\(([^)\s]+?\.md)(#[^)]*)?\)'
+foreach ($File in $MarkdownFiles) {
+    $Text = Read-Utf8 $File.FullName
+    $FenceCount = ([regex]::Matches($Text, '(?m)^\s*```')).Count
+    if (($FenceCount % 2) -ne 0) {
+        Fail "代码块未闭合：$(Get-Relative $File.FullName)（``` 数量 $FenceCount）"
+    }
+
+    foreach ($Match in $LinkPattern.Matches($Text)) {
+        $Target = [System.Uri]::UnescapeDataString($Match.Groups[1].Value)
+        if ($Target -match '^(https?:|mailto:)') {
+            continue
+        }
+        $Resolved = Join-Path $File.DirectoryName $Target
+        if (-not (Test-Path -LiteralPath $Resolved)) {
+            Fail "文档链接失效：$(Get-Relative $File.FullName) -> $Target"
+        }
+    }
+}
+
+# ---------------------------------------------------------------- 3. project.godot
+$ProjectPath = Join-Path $Root "project.godot"
+$Ini = @{}
+if (Test-Path -LiteralPath $ProjectPath) {
+    $CurrentSection = ""
+    foreach ($Line in [System.IO.File]::ReadAllLines($ProjectPath, [System.Text.Encoding]::UTF8)) {
+        $Trimmed = $Line.Trim()
+        if ($Trimmed -eq "" -or $Trimmed.StartsWith(";")) {
+            continue
+        }
+        if ($Trimmed -match '^\[(.+)\]$') {
+            $CurrentSection = $Matches[1]
+            continue
+        }
+        if ($Trimmed -match '^([^=]+)=(.*)$') {
+            $Key = "$CurrentSection/$($Matches[1].Trim())"
+            $Ini[$Key] = $Matches[2].Trim().Trim('"')
+        }
+    }
+}
+
+if ($Ini.Count -eq 0) {
+    Fail "project.godot 解析失败或为空"
+}
+
+$Version = $Ini["application/config/version"]
+if (-not $Version) {
+    Fail "project.godot 缺少 application/config/version"
+} elseif ($Version -notmatch '^\d+\.\d+\.\d+$') {
+    Fail "版本号不是语义化版本：$Version"
+}
+
+$MainScene = $Ini["application/run/main_scene"]
+if (-not $MainScene) {
+    Fail "project.godot 缺少 run/main_scene"
+} else {
+    $MainPath = Join-Path $Root ($MainScene -replace '^res://', '')
+    if (-not (Test-Path -LiteralPath $MainPath)) {
+        Fail "主场景不存在：$MainScene"
+    }
+}
+
+$Stretch = $Ini["display/window/stretch/mode"]
+if ($Stretch -and $Stretch -ne "disabled") {
+    Fail "display/window/stretch/mode 必须为 disabled（当前：$Stretch），否则抓取坐标会偏移"
+}
+
+$BoolSettings = @{
+    "display/window/size/transparent"              = "窗口透明"
+    "display/window/per_pixel_transparency/allowed" = "per-pixel transparency"
+    "display/window/size/borderless"                = "无边框"
+    "display/window/size/always_on_top"             = "置顶"
+    "rendering/viewport/transparent_background"     = "透明背景"
+}
+foreach ($Key in $BoolSettings.Keys) {
+    if ($Ini[$Key] -ne "true") {
+        Fail "project.godot 必须开启 $($BoolSettings[$Key])（$Key=true），当前：$($Ini[$Key])"
+    }
+}
+
+$ThemePath = $Ini["gui/theme/custom"]
+if (-not $ThemePath) {
+    Fail "project.godot 缺少 gui/theme/custom（中文 UI 会回退到无 CJK 的默认字体）"
+} else {
+    $ThemeFull = Join-Path $Root ($ThemePath -replace '^res://', '')
+    if (-not (Test-Path -LiteralPath $ThemeFull)) {
+        Fail "主题文件不存在：$ThemePath"
+    }
+}
+
+$Helper = $Ini["autoload/_mcp_game_helper"]
+if ($Helper) {
+    $HelperPath = Join-Path $Root (($Helper -replace '^\*', '') -replace '^res://', '')
+    if (-not (Test-Path -LiteralPath $HelperPath)) {
+        Fail "_mcp_game_helper autoload 指向不存在的文件：$Helper"
+    }
+}
+
+# ---------------------------------------------------------------- 4. 发布排除
+$PresetPath = Join-Path $Root "export_presets.cfg"
+if (Test-Path -LiteralPath $PresetPath) {
+    $PresetText = Read-Utf8 $PresetPath
+    if ($PresetText -notmatch 'exclude_filter\s*=\s*"[^"]*addons/godot_ai') {
+        Fail "export_presets.cfg 的 exclude_filter 未排除 addons/godot_ai"
+    }
+}
+
+$BuildScript = Join-Path $Root "tools/build_release.ps1"
+if (Test-Path -LiteralPath $BuildScript) {
+    $BuildText = Read-Utf8 $BuildScript
+    foreach ($Needle in @("_mcp_game_helper", "godot_ai")) {
+        if ($BuildText -notmatch [regex]::Escape($Needle)) {
+            Fail "tools/build_release.ps1 缺少发布剥离逻辑：$Needle"
+        }
+    }
+}
+
+if (-not (Test-Path -LiteralPath (Join-Path $Root "assets/fonts/OFL.txt"))) {
+    Fail "缺少字体许可证 assets/fonts/OFL.txt"
+}
+
+# ---------------------------------------------------------------- 5. Git 卫生
+$Tracked = @()
+try {
+    $Tracked = @(& git -C $Root -c core.quotepath=false ls-files 2>$null)
+    if ($LASTEXITCODE -ne 0) {
+        Warn "git ls-files 失败：可能不是 git 仓库"
+    }
+} catch {
+    Warn "无法执行 git：$($_.Exception.Message)"
+}
+
+foreach ($TrackedPath in $Tracked) {
+    if ($TrackedPath -match '^\.godot/') {
+        Fail "生成目录被提交：$TrackedPath"
+    }
+    if ($TrackedPath -match '^(build|export)/') {
+        Fail "构建目录被提交：$TrackedPath"
+    }
+    if ($TrackedPath -match '\.(exe|pck|log|tmp)$') {
+        Fail "构建产物/日志被提交：$TrackedPath"
+    }
+    if ($TrackedPath -match '(^|/)(\.env|\.env\..*|credentials\.json|secrets?\.(json|yaml|yml|txt))$') {
+        Fail "疑似密钥文件被提交：$TrackedPath"
+    }
+}
+
+$MissingUid = @()
+foreach ($Gd in ($Tracked | Where-Object { $_ -like "*.gd" })) {
+    $Uid = Join-Path $Root ($Gd + ".uid")
+    if (-not (Test-Path -LiteralPath $Uid)) {
+        $MissingUid += $Gd
+    }
+}
+if ($MissingUid.Count -gt 0) {
+    Warn ("以下 GDScript 缺少 .uid（请用编辑器保存一次）：" + ($MissingUid -join ", "))
+}
+
+$HooksPath = ""
+try {
+    $HooksPath = (& git -C $Root config core.hooksPath 2>$null)
+} catch { }
+if ($HooksPath -ne ".githooks") {
+    Warn "未安装本地钩子；运行 tools/install_hooks.ps1 可让门禁在提交前自动执行"
+}
+
+# ---------------------------------------------------------------- 6. 文档契约
+$ReadmeText = Read-Utf8 (Join-Path $Root "README.md")
+if ($ReadmeText -notmatch '06-工程/04-项目门禁\.md') {
+    Fail "README.md 未链接项目门禁文档"
+}
+$DocsReadme = Read-Utf8 (Join-Path $Root "docs/README.md")
+if ($DocsReadme -notmatch '06-工程/04-项目门禁\.md') {
+    Fail "docs/README.md 未链接项目门禁文档"
+}
+$Roadmap = Read-Utf8 (Join-Path $Root "docs/00-项目/02-路线图与进度.md")
+if ($Roadmap -notmatch '当前状态') {
+    Fail "路线图缺少“当前状态”章节"
+}
+$Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
+if ($Appendix -notmatch 'v1\.3') {
+    Fail "appendix 文档版本未更新到 v1.3"
+}
+
+# ---------------------------------------------------------------- 7. 可选：Godot
+if ($Full) {
+    if (-not $GodotExe) {
+        $Candidate = "C:\Users\16225\Desktop\Godot_v4.7.2-stable_win64.exe"
+        if (Test-Path -LiteralPath $Candidate) {
+            $GodotExe = $Candidate
+        }
+    }
+    if (-not $GodotExe -or -not (Test-Path -LiteralPath $GodotExe)) {
+        Warn "-Full 已跳过：找不到 Godot 可执行文件"
+    } else {
+        Write-Host "[gate] Godot 导入…"
+        & $GodotExe --headless --path $Root --import 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Fail "Godot --import 失败（退出码 $LASTEXITCODE）"
+        }
+
+        $TestScript = Join-Path $Root "tests/run_tests.gd"
+        if (Test-Path -LiteralPath $TestScript) {
+            Write-Host "[gate] Godot 测试…"
+            & $GodotExe --headless --path $Root --script "res://tests/run_tests.gd" 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                Fail "Godot 测试失败（退出码 $LASTEXITCODE）"
+            }
+        } else {
+            Warn "-Full：tests/run_tests.gd 不存在，跳过测试"
+        }
+    }
+}
+
+# ---------------------------------------------------------------- 8. 可选：发布 staging
+if ($ReleaseCheck) {
+    Write-Host "[gate] 生成发布 staging…"
+    $BuildScriptPath = Join-Path $Root "tools/build_release.ps1"
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $BuildScriptPath -NoExport 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Fail "build_release.ps1 -NoExport 失败（退出码 $LASTEXITCODE）"
+    } else {
+        $Staging = Join-Path $Root "build/staging"
+        $StagingProject = Join-Path $Staging "project.godot"
+        if (-not (Test-Path -LiteralPath $StagingProject)) {
+            Fail "发布 staging 未生成 project.godot"
+        } else {
+            $StagingText = Read-Utf8 $StagingProject
+            if ($StagingText -match '_mcp_game_helper') {
+                Fail "发布 staging 仍包含 _mcp_game_helper"
+            }
+            if ($StagingText -match 'editor_plugins') {
+                Fail "发布 staging 仍包含 [editor_plugins]"
+            }
+        }
+        if (Test-Path -LiteralPath (Join-Path $Staging "addons/godot_ai")) {
+            Fail "发布 staging 仍包含 addons/godot_ai"
+        }
+        if (Test-Path -LiteralPath (Join-Path $Staging "tests")) {
+            Fail "发布 staging 仍包含 tests/"
+        }
+        if (-not (Test-Path -LiteralPath (Join-Path $Staging "assets/fonts/OFL.txt"))) {
+            Fail "发布 staging 缺少字体许可证"
+        }
+    }
+}
+
+# ---------------------------------------------------------------- 9. 结果
+Write-Host ""
+if ($script:Warnings.Count -gt 0) {
+    Write-Host "警告（$($script:Warnings.Count)）：" -ForegroundColor Yellow
+    foreach ($Warning in $script:Warnings) {
+        Write-Host "  - $Warning" -ForegroundColor Yellow
+    }
+    Write-Host ""
+}
+
+if ($script:Errors.Count -gt 0) {
+    Write-Host "GATE FAILED（$($script:Errors.Count) 项）：" -ForegroundColor Red
+    foreach ($ErrorItem in $script:Errors) {
+        Write-Host "  - $ErrorItem" -ForegroundColor Red
+    }
+    exit 1
+}
+
+Write-Host "GATE PASS" -ForegroundColor Green
+Write-Host "  文档 / 工程设置 / 发布规则 / git 卫生检查通过"
+if ($Full) { Write-Host "  -Full：Godot 导入与测试已执行" }
+if ($ReleaseCheck) { Write-Host "  -ReleaseCheck：发布 staging 已校验" }
+exit 0

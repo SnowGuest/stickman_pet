@@ -1,0 +1,14 @@
+#!/bin/sh
+# 校验提交信息符合 Conventional Commits。
+msg_file="$1"
+first_line="$(head -n 1 "$msg_file")"
+
+case "$first_line" in
+    Merge\ *|Revert\ *) exit 0 ;;
+esac
+
+if ! printf '%s' "$first_line" | grep -Eq '^(feat|fix|docs|refactor|test|chore|perf|build|ci)(\([a-z0-9_-]+\))?: .{4,}'; then
+    echo "提交信息不符合 Conventional Commits。"
+    echo "示例：feat(physics): 增加抓取约束 / docs(gate): 补充门禁说明"
+    exit 1
+fi

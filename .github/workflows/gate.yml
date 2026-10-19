@@ -1,0 +1,47 @@
+name: gate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  static-gate:
+    name: Static project gate
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run project gate
+        shell: pwsh
+        run: ./tools/gate.ps1
+
+  godot-import:
+    name: Godot import and tests
+    runs-on: windows-latest
+    needs: static-gate
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Godot
+        uses: actions/cache@v4
+        with:
+          path: .godot-bin
+          key: godot-4.7.2
+
+      - name: Download Godot 4.7.2
+        shell: pwsh
+        run: |
+          if (!(Test-Path .godot-bin/Godot.exe)) {
+            New-Item -ItemType Directory -Force .godot-bin | Out-Null
+            $url = "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_win64.exe.zip"
+            Invoke-WebRequest -Uri $url -OutFile godot.zip
+            Expand-Archive godot.zip -DestinationPath .godot-bin -Force
+            Rename-Item .godot-bin/Godot_v4.7.2-stable_win64.exe Godot.exe
+          }
+
+      - name: Run gate with Godot
+        shell: pwsh
+        run: ./tools/gate.ps1 -Full -GodotExe ./.godot-bin/Godot.exe

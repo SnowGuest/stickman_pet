@@ -1,0 +1,6 @@
+#!/bin/sh
+# 提交前运行项目门禁；失败则阻止提交。
+set -e
+
+ROOT="$(git rev-parse --show-toplevel)"
+exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ROOT/tools/gate.ps1"
