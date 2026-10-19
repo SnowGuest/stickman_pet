@@ -21,6 +21,7 @@
 - 7 个 OGG 音效入库（脚步/落地/抛出/坐下/挥手/鼓掌/弹出）
 - 纹理审查：21 张 1×1 色块全部丢弃，色号已提取
 - 应用/托盘图标入库：多尺寸 ICO + 透明托盘图标
+- 骨骼数据：13 骨 / 14 关节，`assets/rigs/stickman.json`
 - 项目门禁：AGENTS 契约、`tools/gate.ps1`、Git 钩子、CI 静态检查
 - 中文字体：Noto Sans SC（OFL 1.1）与全局 Theme
 - 发布构建脚本：staging 排除 `addons/godot_ai`、移除 `_mcp_game_helper`

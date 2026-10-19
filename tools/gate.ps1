@@ -329,8 +329,8 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.16') {
-    Fail "appendix 文档版本未更新到 v1.16"
+if ($Appendix -notmatch 'v1\.17') {
+    Fail "appendix 文档版本未更新到 v1.17"
 }
 $PaletteDoc = Read-Utf8 (Join-Path $Root "docs/04-表现/05-配色与无脸规范.md")
 if ($PaletteDoc -notmatch '#FF6600' -or $PaletteDoc -notmatch '空心头') {
@@ -374,6 +374,17 @@ if ($ProjectFile -notmatch 'assets/icons/icon_512\.png') {
 $ExportFile = Read-Utf8 (Join-Path $Root "export_presets.cfg")
 if ($ExportFile -notmatch 'assets/icons/icon\.ico') {
     Fail "export_presets.cfg 未使用新 exe 图标"
+}
+$RigPath = Join-Path $Root "assets/rigs/stickman.json"
+if (-not (Test-Path $RigPath)) {
+    Fail "骨骼数据缺失：assets/rigs/stickman.json"
+}
+$Rig = Get-Content -LiteralPath $RigPath -Raw | ConvertFrom-Json
+if ($Rig.bones.Count -ne 13 -or $Rig.joints.Count -ne 14) {
+    Fail "骨骼数据不是 13 骨 / 14 关节"
+}
+if ([double]$Rig.head_radius -ne 18.0) {
+    Fail "骨骼 head_radius 不是 18.0"
 }
 $TrayDoc = Read-Utf8 (Join-Path $Root "docs/02-平台/03-托盘与设置.md")
 if ($TrayDoc -notmatch 'Shell_NotifyIcon') {
