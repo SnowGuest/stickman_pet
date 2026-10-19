@@ -23,6 +23,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full
 - 7 个 OGG 音效可加载，wave 循环、whoosh 不循环；
 - 骨骼 JSON：13 骨 / 14 关节 / head_radius=18 / 父级顺序；
 - 配色 JSON：5 色、默认橙色、橙空心头；
+- 导出预设：Windows Desktop、嵌入 PCK、icon.ico、排除 godot_ai/tests/tools；
 - GDScript 警告等级：untyped / unsafe_* / return_value_discarded 为 warn。
 
-当前：**54 项检查**，失败时退出码 1。
+当前：**60 项检查**，失败时退出码 1。
+`gate -Full` 还会执行主场景启动冒烟：`--headless --quit-after 2`。

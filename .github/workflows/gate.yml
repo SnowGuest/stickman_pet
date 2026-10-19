@@ -55,3 +55,7 @@ jobs:
       - name: Run gate with Godot
         shell: pwsh
         run: ./tools/gate.ps1 -Full -GodotExe ./.godot-bin/Godot.exe
+
+      - name: PCK packaging check
+        shell: pwsh
+        run: ./tools/build_release.ps1 -PackOnly -GodotExe ./.godot-bin/Godot.exe

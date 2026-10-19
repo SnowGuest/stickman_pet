@@ -479,6 +479,16 @@ if ($Full) {
         } elseif (-not (Test-Path -LiteralPath $TestScript)) {
             Warn "-Full：tests/run_tests.gd 不存在，跳过测试"
         }
+
+        Write-Host "[gate] 启动冒烟…"
+        $ErrorActionPreference = "Continue"
+        $SmokeOutput = & $GodotExe --headless --path $Root --quit-after 2 2>&1
+        $SmokeCode = $LASTEXITCODE
+        $ErrorActionPreference = $OldEap
+        $SmokeOutput | Out-Null
+        if ($SmokeCode -ne 0) {
+            Fail "主场景启动冒烟失败（退出码 $SmokeCode）"
+        }
     }
 }
 

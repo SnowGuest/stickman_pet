@@ -16,6 +16,7 @@ func _initialize() -> void:
 	_test_audio()
 	_test_rig()
 	_test_palette()
+	_test_export_preset()
 	print("[tests] checks=%d failures=%d" % [_checks, _failures])
 	if _failures > 0:
 		push_error("[tests] FAIL")
@@ -161,3 +162,14 @@ func _test_palette() -> void:
 	_check(palettes.size() == 5, "palette has 5 colors")
 	var orange = palettes.get("orange", {})
 	_check(str(orange.get("head", "")) == "hollow", "orange head is hollow")
+
+
+func _test_export_preset() -> void:
+	var raw := FileAccess.get_file_as_string("res://export_presets.cfg")
+	_check(raw.contains('name="Windows Desktop"'), "export preset name")
+	_check(raw.contains('platform="Windows Desktop"'), "export preset platform")
+	_check(raw.contains("binary_format/embed_pck=true"), "export embeds pck")
+	_check(raw.contains('application/icon="res://assets/icons/icon.ico"'),
+			"export uses icon.ico")
+	_check(raw.contains("addons/godot_ai/*"), "export excludes godot_ai")
+	_check(raw.contains("tests/*") and raw.contains("tools/*"), "export excludes dev dirs")
