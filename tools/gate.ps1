@@ -95,6 +95,7 @@ $RequiredFiles = @(
     "docs/04-表现/01-渲染与2.5D.md",
     "docs/04-表现/03-音频与界面.md",
     "docs/04-表现/04-素材清单.md",
+    "docs/04-表现/05-配色与无脸规范.md",
     "docs/05-行为/01-状态机与交互.md",
     "docs/05-行为/02-光标交互规范.md",
     "docs/05-行为/03-内置行为清单.md",
@@ -328,8 +329,12 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.13') {
-    Fail "appendix 文档版本未更新到 v1.13"
+if ($Appendix -notmatch 'v1\.14') {
+    Fail "appendix 文档版本未更新到 v1.14"
+}
+$PaletteDoc = Read-Utf8 (Join-Path $Root "docs/04-表现/05-配色与无脸规范.md")
+if ($PaletteDoc -notmatch '#FF6600' -or $PaletteDoc -notmatch '空心头') {
+    Fail "配色文档缺少橙色 #FF6600 或空心头规则"
 }
 $Assets = Read-Utf8 (Join-Path $Root "docs/04-表现/04-素材清单.md")
 if ($Assets -notmatch 'sfx_step') {

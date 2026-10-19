@@ -17,6 +17,7 @@
 - 素材清单：图标、动画 JSON、约 21 个音效、授权记录
 - 移除 3D 道具系统相关内容（本期只做 2.5D）
 - 明确无脸火柴人：移除面部系统，改为 HeadAim 与身体语言
+- 五色配色与橙色空心头规范
 - 项目门禁：AGENTS 契约、`tools/gate.ps1`、Git 钩子、CI 静态检查
 - 中文字体：Noto Sans SC（OFL 1.1）与全局 Theme
 - 发布构建脚本：staging 排除 `addons/godot_ai`、移除 `_mcp_game_helper`
