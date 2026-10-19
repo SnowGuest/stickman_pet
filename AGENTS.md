@@ -108,10 +108,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full -Releas
 | 项 | 值 |
 |---|---|
 | 引擎 | Godot 4.7.2-stable，`C:\Users\16225\Desktop\Godot_v4.7.2-stable_win64.exe` |
-| 导出模板 | **未安装**，真实导出会失败 |
-| git 远端 | `origin` = `https://github.com/SnowGuest/stickman_pet.git`，push 受认证阻塞 |
+| 导出模板 | 已安装 4.7.2-stable（`%APPDATA%\Godot\export_templates\4.7.2.stable`） |
+| git 远端 | `origin` = `https://github.com/SnowGuest/stickman_pet.git`，push 受认证/网络阻塞 |
+| 发布产物 | `build/release/StickmanPet.exe` 117.92MB（2026-10-19） |
 | 字体 | Noto Sans SC 可变字体，17.7MB，OFL，已接入全局 Theme |
-| 当前阶段 | P0 收尾（工程基线完成，CI/门禁刚建立） |
+| 当前阶段 | P0 收尾（98%）：真实 exe 已产出，仅远端 CI 待跑 |
 
 环境事实变化时更新本表，不要在新会话里假设旧状态。
 

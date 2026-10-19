@@ -1,7 +1,7 @@
 # Stickman Pet · 文档中心
 
 > 工程：`E:\stickman pet` · Godot 4.7.2-stable · Windows 优先
-> 文档版本：**v1.19**（连续挥手音效设为循环）
+> 文档版本：**v1.20**（真实 Windows exe 产出，P0-R7 完成）
 > 维护原则：一份文档只回答一类问题；架构决策进 ADR；实现细节必须带参数、边界与验收。
 
 ---
