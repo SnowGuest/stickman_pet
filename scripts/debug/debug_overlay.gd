@@ -11,6 +11,7 @@ var passthrough: PassthroughService
 
 var show_skeleton: bool = true
 var show_passthrough: bool = false
+var highlight_bones: Dictionary = {}
 
 
 func setup(p_definition: RigDefinition, p_pose: RigPose, p_renderer: StickRenderer,
@@ -34,6 +35,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			animation_selected.emit(&"walk")
 		KEY_F4:
 			animation_selected.emit(&"drag_idle")
+		KEY_F5:
+			animation_selected.emit(&"wave")
 		KEY_F6:
 			palette_cycle.emit()
 		KEY_F7:
@@ -53,6 +56,14 @@ func _draw() -> void:
 		for joint in pose.joint_pos:
 			var point := pose.root_pos + (joint - pose.root_pos) * scale
 			draw_circle(point, 3.0, Color(1.0, 0.2, 0.2, 0.9))
+		for bone in definition.bones:
+			if not highlight_bones.has(bone.id):
+				continue
+			var a := pose.root_pos + (pose.joint_pos[bone.start_idx]
+					- pose.root_pos) * scale
+			var b := pose.root_pos + (pose.joint_pos[bone.end_idx]
+					- pose.root_pos) * scale
+			draw_line(a, b, Color(1.0, 0.9, 0.1, 0.9), 2.0, true)
 	if show_passthrough and passthrough != null:
 		var region := passthrough.get_last_region()
 		if region.size() > 2:

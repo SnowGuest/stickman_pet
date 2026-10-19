@@ -199,6 +199,7 @@ func _test_animation() -> void:
 	_check(library.get_clip(&"idle") != null, "idle clip")
 	_check(library.get_clip(&"walk") != null, "walk clip")
 	_check(library.get_clip(&"drag_idle") != null, "drag_idle clip")
+	_check(library.get_clip(&"wave") != null, "wave performance clip")
 
 	var all_finite := true
 	for clip_name in library.names():
@@ -263,6 +264,13 @@ func _test_animation() -> void:
 	player.seek(0.5)
 	_check(absf(player.time - player.current.length * 0.5) < 0.001,
 			"animation seek")
+	var events: Array[String] = []
+	player.event_fired.connect(func(name: String) -> void: events.append(name))
+	player.play(&"walk", 0.0)
+	for i in 130:
+		player.tick(1.0 / 60.0, pose)
+	_check(events.has("step_l"), "walk emits step_l")
+	_check(events.has("step_r"), "walk emits step_r")
 	player.free()
 
 

@@ -32,9 +32,12 @@ func _ready() -> void:
 	var screenshot_mode := args.has("--screenshot") or args.has("--pet-screenshot")
 	var grab_probe_mode := args.has("--pet-grab-probe")
 	var anim_override := &""
+	var anim_time := 0.0
 	for arg in args:
 		if arg.begins_with("--anim="):
 			anim_override = StringName(arg.trim_prefix("--anim="))
+		elif arg.begins_with("--anim-time="):
+			anim_time = float(arg.trim_prefix("--anim-time="))
 	var dpi_override := 0.0
 	for arg in args:
 		if arg.begins_with("--dpi="):
@@ -68,6 +71,8 @@ func _ready() -> void:
 	anim_player.play(&"idle", 0.0)
 	if anim_override != &"":
 		anim_player.play(anim_override, 0.0)
+	if anim_time > 0.0 and anim_player.current != null:
+		anim_player.seek(anim_time / anim_player.current.length)
 	anim_player.event_fired.connect(func(event_name: String) -> void:
 		print("[anim] event=", event_name))
 
@@ -85,6 +90,8 @@ func _ready() -> void:
 	debug.visible = debug_mode
 	debug.palette_cycle.connect(_on_palette_cycle)
 	debug.animation_selected.connect(_on_animation_selected)
+	anim_player.clip_changed.connect(_on_anim_clip_changed)
+	_update_anim_highlight()
 
 	panel = FloatPanel.new()
 	add_child(panel)
@@ -260,6 +267,17 @@ func _on_animation_selected(clip_name: StringName) -> void:
 		print("[anim] clip=", clip_name)
 		if panel != null:
 			panel.set_animation_selected(clip_name)
+		_update_anim_highlight()
+
+
+func _on_anim_clip_changed(_clip_name: StringName) -> void:
+	_update_anim_highlight()
+
+
+func _update_anim_highlight() -> void:
+	if debug == null or anim_player == null or anim_player.current == null:
+		return
+	debug.highlight_bones = anim_player.current.tracks.duplicate()
 
 
 func _on_animation_time_seek(normalized: float) -> void:
@@ -293,6 +311,7 @@ func _build_context_menu() -> void:
 	context_menu.add_item("待机", 10)
 	context_menu.add_item("走路", 11)
 	context_menu.add_item("被抓", 12)
+	context_menu.add_item("挥手", 13)
 	context_menu.add_separator()
 	context_menu.add_item("退出", 9)
 
@@ -341,6 +360,8 @@ func _on_context_menu_id(id: int) -> void:
 			_on_animation_selected(&"walk")
 		12:
 			_on_animation_selected(&"drag_idle")
+		13:
+			_on_animation_selected(&"wave")
 		9:
 			get_tree().quit()
 

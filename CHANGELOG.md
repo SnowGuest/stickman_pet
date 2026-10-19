@@ -21,7 +21,7 @@
 - 7 个 OGG 音效入库（脚步/落地/挥动/坐下/挥手/鼓掌/弹出）
 - 挥手 whoosh 重命名为 `sfx_wave_whoosh.ogg`，抛出音效待补
 - `sfx_wave.ogg` 设为循环，用作连续挥手
-- P0 工程基线测试 118 项，替换占位测试入口
+- P0 工程基线测试 121 项，替换占位测试入口
 - `gate -Full` 增加主场景启动冒烟
 - 真实 Windows exe 导出成功（首版 117.92MB，P1 版 117.96MB），exe 冒烟退出 0
 - GitHub Actions 跑通，P0 工程基线 100% 完成
@@ -41,6 +41,7 @@
 - P2 动画：AnimClip/AnimLibrary/PoseSampler/PoseBlender/AnimPlayer
 - P2 剪辑：idle/walk/drag_idle，F2/F3/F4 切换，`--anim=` 截图
 - P2 加性呼吸层、事件去重、FloatPanel 动画剪辑/时间轴
+- P2 `wave` 表演剪辑（预备/停顿/过冲）与骨骼高亮
 - 托盘 helper 设置 `WS_EX_TOOLWINDOW`，隐藏 Alt+Tab/任务栏条目
 - 新增 `tools/test_alt_tab.ps1` 验收脚本
 - 发布脚本增加导出模板预检，缺失时给出明确路径
