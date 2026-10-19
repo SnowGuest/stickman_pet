@@ -6,6 +6,9 @@
 
 ### Added
 
+- 开发路线图（P0–P6）：每阶段目标、需求、验收与当前状态
+- 版本迭代目录：v0.1.0–v1.0.0 的迭代说明与更新记录
+- README：开源项目介绍、状态、路线图与快速开始
 - 项目门禁：AGENTS 契约、`tools/gate.ps1`、Git 钩子、CI 静态检查
 - 中文字体：Noto Sans SC（OFL 1.1）与全局 Theme
 - 发布构建脚本：staging 排除 `addons/godot_ai`、移除 `_mcp_game_helper`

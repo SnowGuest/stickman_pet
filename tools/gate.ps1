@@ -76,6 +76,8 @@ $RequiredFiles = @(
     "docs/00-项目/01-项目目标.md",
     "docs/00-项目/02-路线图与进度.md",
     "docs/00-项目/03-风险与合规.md",
+    "docs/00-项目/路线图/README.md",
+    "docs/00-项目/版本迭代/README.md",
     "docs/01-总览/01-产品与边界.md",
     "docs/01-总览/02-架构与运行时.md",
     "docs/01-总览/03-Godot工程基线.md",
@@ -318,8 +320,16 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.4') {
-    Fail "appendix 文档版本未更新到 v1.4"
+if ($Appendix -notmatch 'v1\.5') {
+    Fail "appendix 文档版本未更新到 v1.5"
+}
+$RoadmapDetail = Read-Utf8 (Join-Path $Root "docs/00-项目/路线图/README.md")
+if ($RoadmapDetail -notmatch '当前在哪一步') {
+    Fail "路线图目录缺少“当前在哪一步”章节"
+}
+$Versions = Read-Utf8 (Join-Path $Root "docs/00-项目/版本迭代/README.md")
+if ($Versions -notmatch '版本总览') {
+    Fail "版本迭代目录缺少“版本总览”"
 }
 $GateDoc = Read-Utf8 (Join-Path $Root "docs/06-工程/04-项目门禁.md")
 if ($GateDoc -notmatch '行业参考') {
