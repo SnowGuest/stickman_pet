@@ -118,8 +118,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full -Releas
 | 发布产物 | `build/release/StickmanPet.exe` 约 118MB（P1 版 117.96MB，2026-10-19） |
 | CI | GitHub Actions 已跑通（2026-10-19，用户确认） |
 | 字体 | Noto Sans SC 可变字体，17.7MB，OFL，已接入全局 Theme |
-| 原生工具链 | 本机无 C++/Rust/CMake，`desktop_ext` 暂不可编译 |
-| 当前阶段 | P1 最小可视（90%）：窗口/穿透/单实例/静态火柴人/FloatPanel 完成；托盘 fallback 可用，原生扩展与抓取误差待补 |
+| 原生工具链 | .NET Framework `csc.exe` 可用；无 C++/Rust/CMake |
+| 当前阶段 | P1 最小可视（95%）：窗口/穿透/单实例/静态火柴人/FloatPanel/C# 原生托盘完成；抓取误差待补 |
 
 环境事实变化时更新本表，不要在新会话里假设旧状态。
 

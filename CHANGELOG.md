@@ -28,6 +28,7 @@
 - P1：透明窗口 + 动态穿透 + 单实例 + 13 骨静态火柴人
 - 火柴人改为单条 Line2D 17 点一笔画，纯色、无白色/深色描边
 - P1 托盘 fallback：PowerShell NotifyIcon，缩放/退出命令可用
+- P1 原生托盘 helper：C# `TrayHelper.cs`，`build_release` 用 csc 编译
 - P1 FloatPanel：缩放/线宽/色板/骨架点热调
 - P1 宠物右键菜单；打开时锁定全窗穿透，关闭恢复凸包
 - 修复火柴人底部裁切：按实际缩放计算包围盒，顶部 32px、底部按线宽留安全边距

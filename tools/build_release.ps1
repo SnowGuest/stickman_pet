@@ -51,6 +51,20 @@ if ([string]::IsNullOrWhiteSpace($OutDir)) {
 $BuildDir = Join-Path $Root "build"
 $Staging = Join-Path $BuildDir "staging"
 
+function Build-NativeTrayHelper {
+    $csc = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+    if (-not (Test-Path -LiteralPath $csc)) {
+        throw "找不到 csc.exe，无法构建原生托盘 helper"
+    }
+    $source = Join-Path $Root "scripts/tray/TrayHelper.cs"
+    $output = Join-Path $Root "scripts/tray/tray_helper.exe"
+    & $csc /nologo /codepage:65001 /target:winexe /out:$output `
+        /r:System.Windows.Forms.dll /r:System.Drawing.dll $source | Out-Null
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $output)) {
+        throw "原生托盘 helper 编译失败（退出码 $LASTEXITCODE）"
+    }
+}
+
 function Quote-ProcessArg {
     param([string]$Value)
     if ($Value -match '\s') {
@@ -91,6 +105,7 @@ New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
 New-Item -ItemType File -Force -Path (Join-Path $BuildDir ".gdignore") | Out-Null
 
 Write-Host "[1/5] 清理 staging: $Staging"
+Build-NativeTrayHelper
 if (Test-Path -LiteralPath $Staging) {
     Remove-Item -LiteralPath $Staging -Recurse -Force
 }

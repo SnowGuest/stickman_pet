@@ -287,7 +287,7 @@ func _test_export_preset() -> void:
 	_check(raw.contains("binary_format/embed_pck=true"), "export embeds pck")
 	_check(raw.contains('application/icon="res://assets/icons/icon.ico"'),
 			"export uses icon.ico")
-	_check(raw.contains('include_filter="scripts/tray/*.ps1"'),
+	_check(raw.contains('include_filter="scripts/tray/*.ps1,scripts/tray/*.exe"'),
 			"export includes tray helper")
 	_check(raw.contains("addons/godot_ai/*"), "export excludes godot_ai")
 	_check(raw.contains("tests/*") and raw.contains("tools/*"), "export excludes dev dirs")
