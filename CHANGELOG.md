@@ -10,6 +10,7 @@
 - 版本迭代目录：v0.1.0–v1.0.0 的迭代说明与更新记录
 - README：开源项目介绍、状态、路线图与快速开始
 - 最终产品定义：像 Alan Becker 的六条特征、体验剧本、表演层缺口
+- AI 集成：Go 客户端 + 本机 WebSocket 协议、模式仲裁、轨道 A（v0.5.5-ai）
 - 项目门禁：AGENTS 契约、`tools/gate.ps1`、Git 钩子、CI 静态检查
 - 中文字体：Noto Sans SC（OFL 1.1）与全局 Theme
 - 发布构建脚本：staging 排除 `addons/godot_ai`、移除 `_mcp_game_helper`
