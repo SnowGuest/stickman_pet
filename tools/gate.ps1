@@ -89,6 +89,7 @@ $RequiredFiles = @(
     "docs/00-项目/版本迭代/v0.5.5.md",
     "docs/02-平台/01-窗口与穿透.md",
     "docs/02-平台/02-输入屏幕与生命周期.md",
+    "docs/02-平台/03-托盘与设置.md",
     "docs/03-仿真/01-骨骼与动画.md",
     "docs/03-仿真/02-物理与抓取.md",
     "docs/04-表现/01-渲染与2.5D.md",
@@ -327,8 +328,12 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.9') {
-    Fail "appendix 文档版本未更新到 v1.9"
+if ($Appendix -notmatch 'v1\.10') {
+    Fail "appendix 文档版本未更新到 v1.10"
+}
+$TrayDoc = Read-Utf8 (Join-Path $Root "docs/02-平台/03-托盘与设置.md")
+if ($TrayDoc -notmatch 'Shell_NotifyIcon') {
+    Fail "托盘文档缺少 Shell_NotifyIcon 实现方案"
 }
 $CursorDoc = Read-Utf8 (Join-Path $Root "docs/05-行为/02-光标交互规范.md")
 if ($CursorDoc -notmatch 'GlobalMouse') {
