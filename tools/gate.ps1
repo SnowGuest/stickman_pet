@@ -95,6 +95,7 @@ $RequiredFiles = @(
     "docs/04-表现/01-渲染与2.5D.md",
     "docs/04-表现/02-3D物品与像素质感.md",
     "docs/04-表现/03-音频与界面.md",
+    "docs/04-表现/04-素材清单.md",
     "docs/05-行为/01-状态机与交互.md",
     "docs/05-行为/02-光标交互规范.md",
     "docs/05-行为/03-内置行为清单.md",
@@ -328,8 +329,12 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.10') {
-    Fail "appendix 文档版本未更新到 v1.10"
+if ($Appendix -notmatch 'v1\.11') {
+    Fail "appendix 文档版本未更新到 v1.11"
+}
+$Assets = Read-Utf8 (Join-Path $Root "docs/04-表现/04-素材清单.md")
+if ($Assets -notmatch 'sfx_step') {
+    Fail "素材清单缺少核心音效 sfx_step"
 }
 $TrayDoc = Read-Utf8 (Join-Path $Root "docs/02-平台/03-托盘与设置.md")
 if ($TrayDoc -notmatch 'Shell_NotifyIcon') {
