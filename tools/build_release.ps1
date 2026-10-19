@@ -13,8 +13,20 @@
 .PARAMETER NoExport
     只生成并校验 staging，不调用 Godot 导出（用于 CI 环境或无导出模板时）。
 
+.PARAMETER PackOnly
+    只导出 PCK，不生成 exe；不需要导出模板，用于验证导出预设与资源打包。
+
+.PARAMETER TemplateVersion
+    Godot 导出模板版本目录名，默认 4.7.2.stable。
+
+.PARAMETER TemplateDir
+    自定义导出模板目录；为空时使用 %APPDATA%\Godot\export_templates\<版本>。
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File tools\build_release.ps1 -NoExport
+
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File tools\build_release.ps1 -PackOnly
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File tools\build_release.ps1
@@ -26,7 +38,8 @@ param(
     [string]$OutDir = "",
     [string]$TemplateVersion = "4.7.2.stable",
     [string]$TemplateDir = "",
-    [switch]$NoExport
+    [switch]$NoExport,
+    [switch]$PackOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,6 +50,41 @@ if ([string]::IsNullOrWhiteSpace($OutDir)) {
 }
 $BuildDir = Join-Path $Root "build"
 $Staging = Join-Path $BuildDir "staging"
+
+function Quote-ProcessArg {
+    param([string]$Value)
+    if ($Value -match '\s') {
+        return '"' + $Value + '"'
+    }
+    return $Value
+}
+
+function Invoke-Godot {
+    param(
+        [string]$ProjectPath,
+        [string[]]$ExtraArgs
+    )
+    $Args = @("--headless", "--path", (Quote-ProcessArg $ProjectPath))
+    foreach ($Arg in $ExtraArgs) {
+        $Args += (Quote-ProcessArg $Arg)
+    }
+    $Process = Start-Process -FilePath $GodotExe -ArgumentList $Args -NoNewWindow -Wait -PassThru
+    return [int]$Process.ExitCode
+}
+
+function Invoke-StagingImport {
+    param([string]$ProjectPath)
+    for ($Attempt = 1; $Attempt -le 3; $Attempt++) {
+        $Code = Invoke-Godot -ProjectPath $ProjectPath -ExtraArgs @("--import")
+        if ($Code -eq 0) {
+            return
+        }
+        if ($Attempt -lt 3) {
+            Write-Host "      导入缓存未就绪，重试（$Attempt/3）…"
+        }
+    }
+    throw "staging 资源导入失败（已重试 3 次），退出码 $Code"
+}
 
 # 让 Godot 忽略 build/，避免扫描 staging 里的 project.godot
 New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
@@ -107,9 +155,51 @@ if (Test-Path -LiteralPath (Join-Path $Staging "tests")) {
 $SizeMB = [math]::Round(((Get-ChildItem -LiteralPath $Staging -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 2)
 Write-Host "      staging 大小: $SizeMB MB"
 
+if ($NoExport -and $PackOnly) {
+    throw "-NoExport 与 -PackOnly 不能同时使用"
+}
+
 if ($NoExport) {
     Write-Host "[4/5] -NoExport：跳过导出"
     Write-Host "[5/5] staging 校验通过（未生成 exe）"
+    return
+}
+
+$RootImported = Join-Path $Root ".godot\imported"
+$StagingImported = Join-Path $Staging ".godot\imported"
+if (Test-Path -LiteralPath $RootImported) {
+    Write-Host "      同步导入缓存（字体/图标/音效）"
+    New-Item -ItemType Directory -Force -Path $StagingImported | Out-Null
+    Copy-Item -Path (Join-Path $RootImported "*") -Destination $StagingImported -Recurse -Force
+}
+
+if ($PackOnly) {
+    if (-not (Test-Path -LiteralPath $GodotExe)) {
+        throw "找不到 Godot：$GodotExe（用 -GodotExe 指定）"
+    }
+    New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+    $Pck = Join-Path $OutDir "StickmanPet.pck"
+
+    Write-Host "[4/5] 导入 staging 并导出 PCK（无需模板）"
+    Invoke-StagingImport -ProjectPath $Staging
+    $Code = Invoke-Godot -ProjectPath $Staging -ExtraArgs @("--export-pack", $Preset, $Pck)
+    if ($Code -ne 0) {
+        throw "PCK 导出失败，退出码 $Code"
+    }
+    if (-not (Test-Path -LiteralPath $Pck)) {
+        throw "PCK 导出未生成 $Pck"
+    }
+
+    Write-Host "[5/5] 校验 PCK"
+    $Bytes = [System.IO.File]::ReadAllBytes($Pck)
+    $Ascii = [System.Text.Encoding]::ASCII.GetString($Bytes)
+    foreach ($Needle in @("godot_ai", "_mcp_game_helper")) {
+        if ($Ascii.Contains($Needle)) {
+            throw "$Pck 包含禁止字符串 '$Needle'"
+        }
+    }
+    $PckMB = [math]::Round((Get-Item -LiteralPath $Pck).Length / 1MB, 2)
+    Write-Host "完成（仅 PCK）：$Pck ($PckMB MB)"
     return
 }
 
@@ -132,14 +222,10 @@ if (-not (Test-Path -LiteralPath $TemplateExe)) {
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $Exe = Join-Path $OutDir "StickmanPet.exe"
 
-& $GodotExe --headless --path $Staging --import
-if ($LASTEXITCODE -ne 0) {
-    throw "资源导入失败，退出码 $LASTEXITCODE"
-}
-
-& $GodotExe --headless --path $Staging --export-release $Preset $Exe
-if ($LASTEXITCODE -ne 0) {
-    throw "导出失败，退出码 $LASTEXITCODE（请确认已安装 $Preset 导出模板）"
+Invoke-StagingImport -ProjectPath $Staging
+$Code = Invoke-Godot -ProjectPath $Staging -ExtraArgs @("--export-release", $Preset, $Exe)
+if ($Code -ne 0) {
+    throw "导出失败，退出码 $Code（请确认已安装 $Preset 导出模板）"
 }
 if (-not (Test-Path -LiteralPath $Exe)) {
     throw "导出未生成 $Exe"
