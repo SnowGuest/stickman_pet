@@ -36,7 +36,7 @@
 | 中文主题 | 已接入 Noto Sans SC | 全局 Theme 生效 | P0 |
 | autoload | `_mcp_game_helper`（仅开发） | 发布脚本自动移除 | P0 |
 | 输入映射 | 无 | 见第 5 章 | P1 |
-| 2D 物理层 | 默认 | Pet/Item/World | P1 |
+| 2D 物理层 | 默认 | Pet/World | P1 |
 | 导入预设 | 无 | 纹理 nearest、音频 ogg | P1 |
 | 导出预设 | `export_presets.cfg` 已创建 | Windows Desktop | P1 |
 | git | 已初始化，`origin/main` | 初始化并提交 | P0 |
@@ -120,23 +120,20 @@ viewport/transparent_background=true
 | 层 | 名称 | 用途 |
 |---|---|---|
 | 1 | `pet` | 宠物碰撞（v1 主要用自研 PBD，预留） |
-| 2 | `item` | 物品落地/拾取 |
-| 3 | `world` | 屏幕边界/地面 |
+| 2 | `world` | 屏幕边界/地面 |
 
-> v1 的宠物物理不依赖 `PhysicsServer2D`，层名主要用于未来玩具/物品碰撞，先规范化避免后期改。
+> v1 的宠物物理不依赖 `PhysicsServer2D`，层名主要用于未来玩具碰撞，先规范化避免后期改。
 
 ### 6.2 渲染层
 
 - 2D 深度用 `z_index`（宠物内部 -5..30），不建大量 `CanvasLayer`。
 - UI 用 `CanvasLayer`（layer 10），保证永远在最上。
-- 3D 物品在 `SubViewport` 内部，不参与主视口 3D 排序。
 
 ### 6.3 组
 
 | 组 | 成员 |
 |---|---|
 | `pet` | 宠物根节点 |
-| `item` | 所有掉落物 |
 | `ui` | 菜单/调试面板 |
 | `debug` | 调试可绘制对象 |
 

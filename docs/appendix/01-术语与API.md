@@ -21,8 +21,6 @@
 | Passthrough | 鼠标穿透，点击落到下层窗口 | 02-平台/01 |
 | NO_FOCUS | 点击不抢焦点的窗口标志 | 02-平台/01 |
 | DPI scale | 系统缩放比例，100%=1.0 | 02-平台/02 |
-| SubViewport | 离屏渲染目标，3D 物品的容器 | 04-表现/02 |
-| Tonemap | 色调映射，Linear 才能保像素色 | 04-表现/02 |
 | State | 行为状态机的节点 | 05-行为/01 |
 | Need | energy / boredom / curiosity 模型 | 05-行为/01 |
 | Schema | 配置键、类型、范围、默认值定义 | 06-工程/01 |
@@ -59,26 +57,7 @@
 | `Geometry2D.offset_polygon(poly, delta)` | 外扩/内缩 |
 | `Geometry2D.merge_polygons(a, b)` | 多边形合并 |
 
-### 2.3 3D 与视口
-
-| API | 说明 |
-|---|---|
-| `SubViewport.transparent_bg` | 透明背景 |
-| `SubViewport.size` | 离屏尺寸 |
-| `SubViewport.render_target_update_mode` | `UPDATE_ALWAYS / UPDATE_ONCE` |
-| `SubViewport.own_world_3d` | 独立 3D 世界 |
-| `Viewport.msaa_3d / screen_space_aa / use_taa / use_debanding` | 全部关闭做像素风 |
-| `Camera3D.projection = PROJECTION_ORTHOGONAL` | 正交 |
-| `Camera3D.size` | 正交视野高度 |
-| `BaseMaterial3D.texture_filter = TEXTURE_FILTER_NEAREST` | 最近邻 |
-| `BaseMaterial3D.shading_mode` | Unshaded / Per-Pixel |
-| `BaseMaterial3D.transparency = TRANSPARENCY_ALPHA_SCISSOR` | 镂空 |
-| `Environment.background_mode = BG_CLEAR_COLOR` | 透明背景 |
-| `Environment.ambient_light_source = AMBIENT_SOURCE_COLOR` | 环境光 |
-| `Environment.tonemap_mode = TONE_MAPPER_LINEAR` | 保持像素色 |
-| `PhysicalBone2D` | 引擎 2D 布娃娃（仅作对照原型，不采用） |
-
-### 2.4 工程
+### 2.3 工程
 
 | API | 说明 |
 |---|---|
@@ -109,7 +88,6 @@
 | 11 | [骨骼与动画](../03-仿真/01-骨骼与动画.md) | 骨骼、FK、剪辑、混合、IK |
 | 12 | [物理与抓取](../03-仿真/02-物理与抓取.md) | PBD、约束、抓取、投掷、调参 |
 | 13 | [渲染与2.5D](../04-表现/01-渲染与2.5D.md) | 线条、分层、视差、倾斜、阴影 |
-| 14 | [3D物品与像素质感](../04-表现/02-3D物品与像素质感.md) | SubViewport、像素完美、合成 |
 | 15 | [音频与界面](../04-表现/03-音频与界面.md) | 音效池、右键菜单、无障碍 |
 | 16 | [状态机与交互](../05-行为/01-状态机与交互.md) | FSM、需求模型、表情、手势映射 |
 | 17 | [配置与持久化](../06-工程/01-配置与持久化.md) | Schema、原子写、迁移、恢复 |
@@ -126,7 +104,7 @@
 | 28 | [光标交互规范](../05-行为/02-光标交互规范.md) | 长按抓取、实体光标、推/撞、GlobalMouse |
 | 29 | [内置行为清单](../05-行为/03-内置行为清单.md) | 10 条自主小剧场、权重/冷却/打断 |
 | 30 | [托盘与设置](../02-平台/03-托盘与设置.md) | 通知区图标、菜单、AI 开关、设置项 |
-| 31 | [素材清单](../04-表现/04-素材清单.md) | 图标/动画/音效/16×16 贴图/授权 |
+| 31 | [素材清单](../04-表现/04-素材清单.md) | 图标/动画/音效/授权 |
 
 ---
 
@@ -140,10 +118,11 @@
 | ADR-04 | 伪 2.5D 分层 | 04-表现/01 |
 | ADR-05 | 全屏透明置顶窗 | 02-平台/01 |
 | ADR-06 | JSON 剪辑 + 自研采样 | 03-仿真/01 |
-| ADR-07 | 3D 物品用 SubViewport 贴图 | 04-表现/02 |
 | ADR-08 | 多岛命中用光标轮询 | 02-平台/01 |
 | ADR-09 | 配置 `user://pet.cfg` + Schema 版本 | 06-工程/01 |
 | ADR-10 | 单实例 TCP 端口锁 | 02-平台/02 |
+
+> ADR 编号不重排；ADR-07 已撤销。
 
 ---
 
@@ -163,6 +142,7 @@
 | 2026-10-19 | v1.8 | 新增光标交互规范：长按抓取、按住变实体推/撞、GlobalMouse 全局按键 |
 | 2026-10-19 | v1.9 | 新增 10 条无 AI 自主小剧场与活动调度规则 |
 | 2026-10-19 | v1.10 | 新增系统托盘与基础设置：显示/缩放/静音/置顶/AI 开关/自启/退出 |
-| 2026-10-19 | v1.11 | 新增素材清单：图标、动画 JSON、约 24 个音效、16×16 贴图、授权与阶段 |
+| 2026-10-19 | v1.11 | 新增素材清单：图标、动画 JSON、约 21 个音效、授权与阶段 |
+| 2026-10-19 | v1.12 | 移除 3D 道具相关内容，本期只做 2.5D 与火柴人 |
 
 维护：架构变更先改 `01-总览/02`，再改领域文档，最后同步本索引。

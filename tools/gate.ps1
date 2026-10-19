@@ -93,7 +93,6 @@ $RequiredFiles = @(
     "docs/03-仿真/01-骨骼与动画.md",
     "docs/03-仿真/02-物理与抓取.md",
     "docs/04-表现/01-渲染与2.5D.md",
-    "docs/04-表现/02-3D物品与像素质感.md",
     "docs/04-表现/03-音频与界面.md",
     "docs/04-表现/04-素材清单.md",
     "docs/05-行为/01-状态机与交互.md",
@@ -329,8 +328,8 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.11') {
-    Fail "appendix 文档版本未更新到 v1.11"
+if ($Appendix -notmatch 'v1\.12') {
+    Fail "appendix 文档版本未更新到 v1.12"
 }
 $Assets = Read-Utf8 (Join-Path $Root "docs/04-表现/04-素材清单.md")
 if ($Assets -notmatch 'sfx_step') {
@@ -343,6 +342,12 @@ if ($TrayDoc -notmatch 'Shell_NotifyIcon') {
 $CursorDoc = Read-Utf8 (Join-Path $Root "docs/05-行为/02-光标交互规范.md")
 if ($CursorDoc -notmatch 'GlobalMouse') {
     Fail "光标交互文档缺少 GlobalMouse 方案"
+}
+$ForbiddenHits = @()
+$ForbiddenHits += Get-ChildItem (Join-Path $Root "docs") -Recurse -Filter *.md | Select-String -Pattern 'Minecraft|Mojang'
+$ForbiddenHits += Select-String -Path (Join-Path $Root "README.md") -Pattern 'Minecraft|Mojang'
+if ($ForbiddenHits.Count -gt 0) {
+    Fail "文档仍包含已移除的 Minecraft/Mojang 关键词"
 }
 $Activities = Read-Utf8 (Join-Path $Root "docs/05-行为/03-内置行为清单.md")
 if ($Activities -notmatch 'B10') {
