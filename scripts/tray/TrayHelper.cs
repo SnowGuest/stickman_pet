@@ -55,7 +55,7 @@ internal static class TrayHelper
         {
             _notify.Icon = new Icon(iconPath);
         }
-        catch
+        catch (Exception)
         {
             return;
         }

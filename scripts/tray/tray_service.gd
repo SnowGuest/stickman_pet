@@ -23,23 +23,23 @@ func setup(icon_path: String = "res://assets/icons/tray.ico") -> bool:
 	_mouse_path = temp.path_join("stickman_mouse.txt")
 	_icon_path = temp.path_join("stickman_tray.ico")
 	var icon_source := ProjectSettings.globalize_path(icon_path)
-	if FileAccess.file_exists(icon_source):
-		DirAccess.copy_absolute(icon_source, _icon_path)
+	if FileAccess.file_exists(icon_path):
+		_copy_res_to_temp(icon_path, _icon_path)
 	else:
 		_icon_path = icon_source
 	_clear_commands()
 
-	var native_source := ProjectSettings.globalize_path("res://scripts/tray/tray_helper.exe")
-	if FileAccess.file_exists(native_source):
+	var native_res := "res://scripts/tray/tray_helper.exe"
+	if FileAccess.file_exists(native_res):
 		_exe_path = temp.path_join("stickman_tray.exe")
-		DirAccess.copy_absolute(native_source, _exe_path)
-		_helper_pid = OS.create_process(_exe_path, PackedStringArray([
-			_icon_path, _command_path, str(OS.get_process_id()), _mouse_path,
-		]))
-		if _helper_pid > 0:
-			_ready = true
-			print("[tray] native pid=", _helper_pid)
-			return true
+		if _copy_res_to_temp(native_res, _exe_path):
+			_helper_pid = OS.create_process(_exe_path, PackedStringArray([
+				_icon_path, _command_path, str(OS.get_process_id()), _mouse_path,
+			]))
+			if _helper_pid > 0:
+				_ready = true
+				print("[tray] native pid=", _helper_pid)
+				return true
 
 	var source := FileAccess.get_file_as_string("res://scripts/tray/tray_helper.ps1")
 	if source.is_empty():
@@ -98,6 +98,18 @@ func _read_commands() -> PackedStringArray:
 func _clear_commands() -> void:
 	if not _command_path.is_empty() and FileAccess.file_exists(_command_path):
 		DirAccess.remove_absolute(_command_path)
+
+
+func _copy_res_to_temp(res_path: String, temp_path: String) -> bool:
+	var bytes := FileAccess.get_file_as_bytes(res_path)
+	if bytes.is_empty():
+		return false
+	var file := FileAccess.open(temp_path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_buffer(bytes)
+	file.close()
+	return true
 
 
 func shutdown() -> void:
