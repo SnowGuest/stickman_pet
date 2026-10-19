@@ -82,6 +82,7 @@ $RequiredFiles = @(
     "docs/01-总览/02-架构与运行时.md",
     "docs/01-总览/03-Godot工程基线.md",
     "docs/01-总览/04-内容设计.md",
+    "docs/01-总览/05-最终产品定义.md",
     "docs/02-平台/01-窗口与穿透.md",
     "docs/02-平台/02-输入屏幕与生命周期.md",
     "docs/03-仿真/01-骨骼与动画.md",
@@ -320,8 +321,8 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.5') {
-    Fail "appendix 文档版本未更新到 v1.5"
+if ($Appendix -notmatch 'v1\.6') {
+    Fail "appendix 文档版本未更新到 v1.6"
 }
 $RoadmapDetail = Read-Utf8 (Join-Path $Root "docs/00-项目/路线图/README.md")
 if ($RoadmapDetail -notmatch '当前在哪一步') {
