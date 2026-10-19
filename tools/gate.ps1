@@ -329,8 +329,8 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.15') {
-    Fail "appendix 文档版本未更新到 v1.15"
+if ($Appendix -notmatch 'v1\.16') {
+    Fail "appendix 文档版本未更新到 v1.16"
 }
 $PaletteDoc = Read-Utf8 (Join-Path $Root "docs/04-表现/05-配色与无脸规范.md")
 if ($PaletteDoc -notmatch '#FF6600' -or $PaletteDoc -notmatch '空心头') {
@@ -354,6 +354,26 @@ foreach ($f in $AudioFiles) {
     if (-not (Test-Path (Join-Path $Root $f))) {
         Fail "音效文件缺失：$f"
     }
+}
+$IconFiles = @(
+    "assets/icons/icon.ico",
+    "assets/icons/icon_512.png",
+    "assets/icons/tray.ico",
+    "assets/icons/tray_16.png",
+    "assets/icons/README.md"
+)
+foreach ($f in $IconFiles) {
+    if (-not (Test-Path (Join-Path $Root $f))) {
+        Fail "图标文件缺失：$f"
+    }
+}
+$ProjectFile = Read-Utf8 (Join-Path $Root "project.godot")
+if ($ProjectFile -notmatch 'assets/icons/icon_512\.png') {
+    Fail "project.godot 未使用新应用图标"
+}
+$ExportFile = Read-Utf8 (Join-Path $Root "export_presets.cfg")
+if ($ExportFile -notmatch 'assets/icons/icon\.ico') {
+    Fail "export_presets.cfg 未使用新 exe 图标"
 }
 $TrayDoc = Read-Utf8 (Join-Path $Root "docs/02-平台/03-托盘与设置.md")
 if ($TrayDoc -notmatch 'Shell_NotifyIcon') {

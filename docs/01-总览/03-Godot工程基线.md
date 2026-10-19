@@ -50,6 +50,7 @@
 
 config/name="Stickman Pet"
 config/version="0.1.0"
+config/icon="res://assets/icons/icon_512.png"
 config/features=PackedStringArray("4.7", "Forward Plus")
 run/main_scene="res://scenes/main.tscn"
 
