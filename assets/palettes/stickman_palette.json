@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "default": "orange",
+  "palettes": {
+    "green": { "color": "#66CC00", "head": "filled" },
+    "orange": { "color": "#FF6600", "head": "hollow" },
+    "blue": { "color": "#33CCFF", "head": "filled" },
+    "red": { "color": "#CC0000", "head": "filled" },
+    "yellow": { "color": "#FFCC00", "head": "filled" }
+  }
+}
