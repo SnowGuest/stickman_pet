@@ -10,6 +10,8 @@ var renderer: StickRenderer
 var passthrough: PassthroughService
 var debug: DebugOverlay
 var tray: TrayService
+var global_mouse: GlobalMouse
+var grab_probe: GrabProbe
 var panel: FloatPanel
 var context_menu: PopupMenu
 
@@ -26,6 +28,7 @@ func _ready() -> void:
 	var safe_mode := args.has("--safe")
 	var no_passthrough := args.has("--no-passthrough")
 	var screenshot_mode := args.has("--screenshot") or args.has("--pet-screenshot")
+	var grab_probe_mode := args.has("--pet-grab-probe")
 	var dpi_override := 0.0
 	for arg in args:
 		if arg.begins_with("--dpi="):
@@ -87,6 +90,14 @@ func _ready() -> void:
 	add_child(tray)
 	if not screenshot_mode and tray.setup():
 		tray.command_received.connect(_on_tray_command)
+
+	global_mouse = GlobalMouse.new()
+	add_child(global_mouse)
+	global_mouse.setup(tray.get_mouse_path())
+	if grab_probe_mode:
+		grab_probe = GrabProbe.new()
+		add_child(grab_probe)
+		grab_probe.setup(shell, definition, pose, renderer, global_mouse)
 
 	if screenshot_mode:
 		await get_tree().process_frame
@@ -225,8 +236,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _is_over_pet(local):
 		return
 	get_viewport().set_input_as_handled()
+	_open_context_menu(local)
+
+
+func _open_context_menu(local: Vector2) -> void:
 	passthrough.lock_full(shell.content_size)
 	context_menu.popup(Rect2i(Vector2i(local), Vector2i(220, 0)))
+	var marker := FileAccess.open("user://context_menu_open.txt", FileAccess.WRITE)
+	if marker != null:
+		marker.store_string(str(local))
+		marker.close()
+	print("[menu] open local=", local)
 
 
 func _is_over_pet(local: Vector2) -> bool:

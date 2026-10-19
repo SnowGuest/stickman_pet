@@ -26,9 +26,14 @@ internal static class TrayHelper
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr after,
         int x, int y, int cx, int cy, uint flags);
 
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
     private static string _commandFile;
+    private static string _mouseFile;
     private static NotifyIcon _notify;
     private static Timer _timer;
+    private static Timer _mouseTimer;
     private static int _parentPid;
 
     [STAThread]
@@ -40,6 +45,7 @@ internal static class TrayHelper
         }
         var iconPath = args[0];
         _commandFile = args[1];
+        _mouseFile = args.Length > 3 ? args[3] : "";
         _parentPid = int.Parse(args[2]);
 
         SetToolWindow();
@@ -91,6 +97,27 @@ internal static class TrayHelper
             }
         };
         _timer.Start();
+
+        if (!string.IsNullOrEmpty(_mouseFile))
+        {
+            _mouseTimer = new Timer();
+            _mouseTimer.Interval = 16;
+            _mouseTimer.Tick += delegate
+            {
+                try
+                {
+                    var point = Cursor.Position;
+                    var down = (GetAsyncKeyState(0x01) & 0x8000) != 0;
+                    File.WriteAllText(_mouseFile,
+                        point.X + "," + point.Y + "," + (down ? "1" : "0"));
+                }
+                catch
+                {
+                }
+            };
+            _mouseTimer.Start();
+        }
+
         Application.Run();
         _notify.Visible = false;
         _notify.Dispose();

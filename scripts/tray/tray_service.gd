@@ -10,6 +10,7 @@ var _script_path: String = ""
 var _exe_path: String = ""
 var _command_path: String = ""
 var _icon_path: String = ""
+var _mouse_path: String = ""
 
 
 func setup(icon_path: String = "res://assets/icons/tray.ico") -> bool:
@@ -19,6 +20,7 @@ func setup(icon_path: String = "res://assets/icons/tray.ico") -> bool:
 	# 临时目录通常不含空格，避免 OS.create_process 参数被空格拆开。
 	var temp := OS.get_temp_dir()
 	_command_path = temp.path_join("stickman_tray_cmd.txt")
+	_mouse_path = temp.path_join("stickman_mouse.txt")
 	_icon_path = temp.path_join("stickman_tray.ico")
 	var icon_source := ProjectSettings.globalize_path(icon_path)
 	if FileAccess.file_exists(icon_source):
@@ -32,7 +34,7 @@ func setup(icon_path: String = "res://assets/icons/tray.ico") -> bool:
 		_exe_path = temp.path_join("stickman_tray.exe")
 		DirAccess.copy_absolute(native_source, _exe_path)
 		_helper_pid = OS.create_process(_exe_path, PackedStringArray([
-			_icon_path, _command_path, str(OS.get_process_id()),
+			_icon_path, _command_path, str(OS.get_process_id()), _mouse_path,
 		]))
 		if _helper_pid > 0:
 			_ready = true
@@ -103,7 +105,7 @@ func shutdown() -> void:
 	if _helper_pid > 0:
 		OS.kill(_helper_pid)
 		_helper_pid = -1
-	for path in [_script_path, _exe_path, _icon_path]:
+	for path in [_script_path, _exe_path, _icon_path, _mouse_path]:
 		if not path.is_empty() and FileAccess.file_exists(path):
 			DirAccess.remove_absolute(path)
 	_clear_commands()
@@ -111,3 +113,7 @@ func shutdown() -> void:
 
 func _exit_tree() -> void:
 	shutdown()
+
+
+func get_mouse_path() -> String:
+	return _mouse_path

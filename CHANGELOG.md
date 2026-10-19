@@ -21,7 +21,7 @@
 - 7 个 OGG 音效入库（脚步/落地/挥动/坐下/挥手/鼓掌/弹出）
 - 挥手 whoosh 重命名为 `sfx_wave_whoosh.ogg`，抛出音效待补
 - `sfx_wave.ogg` 设为循环，用作连续挥手
-- P0 工程基线测试 100 项，替换占位测试入口
+- P0 工程基线测试 103 项，替换占位测试入口
 - `gate -Full` 增加主场景启动冒烟
 - 真实 Windows exe 导出成功（首版 117.92MB，P1 版 117.96MB），exe 冒烟退出 0
 - GitHub Actions 跑通，P0 工程基线 100% 完成
@@ -29,6 +29,9 @@
 - 火柴人改为单条 Line2D 17 点一笔画，纯色、无白色/深色描边
 - P1 托盘 fallback：PowerShell NotifyIcon，缩放/退出命令可用
 - P1 原生托盘 helper：C# `TrayHelper.cs`，`build_release` 用 csc 编译
+- P1 GlobalMouse：C# 写状态文件，Godot 读取
+- P1 GrabProbe：启动自检 0px；手动点击误差 0.116px
+- P1 右键菜单系统层打开验收
 - P1 FloatPanel：缩放/线宽/色板/骨架点热调
 - P1 宠物右键菜单；打开时锁定全窗穿透，关闭恢复凸包
 - 修复火柴人底部裁切：按实际缩放计算包围盒，顶部 32px、底部按线宽留安全边距

@@ -20,6 +20,7 @@ func _initialize() -> void:
 	_test_renderer()
 	_test_taskbar_geometry()
 	_test_coordinates()
+	_test_global_mouse()
 	_test_palette()
 	_test_export_preset()
 	print("[tests] checks=%d failures=%d" % [_checks, _failures])
@@ -252,6 +253,14 @@ func _test_coordinates() -> void:
 			).is_equal_approx(Vector2(60.0, 30.0)), "negative multi-screen coords")
 	_check(DesktopShell.local_from_global(Vector2(50.0, 60.0), Vector2.ZERO)
 			.is_equal_approx(Vector2(50.0, 60.0)), "origin window coords")
+
+
+func _test_global_mouse() -> void:
+	var parsed := GlobalMouse.parse_state("100,200,1")
+	_check(parsed.get("pos", Vector2.ZERO) == Vector2(100.0, 200.0),
+			"global mouse position parse")
+	_check(bool(parsed.get("down", false)), "global mouse button parse")
+	_check(GlobalMouse.parse_state("bad").is_empty(), "global mouse bad state")
 
 
 func _test_palette() -> void:
