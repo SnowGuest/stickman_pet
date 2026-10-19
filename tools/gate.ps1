@@ -329,8 +329,8 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.14') {
-    Fail "appendix 文档版本未更新到 v1.14"
+if ($Appendix -notmatch 'v1\.15') {
+    Fail "appendix 文档版本未更新到 v1.15"
 }
 $PaletteDoc = Read-Utf8 (Join-Path $Root "docs/04-表现/05-配色与无脸规范.md")
 if ($PaletteDoc -notmatch '#FF6600' -or $PaletteDoc -notmatch '空心头') {
@@ -339,6 +339,21 @@ if ($PaletteDoc -notmatch '#FF6600' -or $PaletteDoc -notmatch '空心头') {
 $Assets = Read-Utf8 (Join-Path $Root "docs/04-表现/04-素材清单.md")
 if ($Assets -notmatch 'sfx_step') {
     Fail "素材清单缺少核心音效 sfx_step"
+}
+$AudioFiles = @(
+    "assets/sfx/sfx_step_01.ogg",
+    "assets/sfx/sfx_land_soft.ogg",
+    "assets/sfx/sfx_throw_whoosh.ogg",
+    "assets/sfx/sfx_sit.ogg",
+    "assets/sfx/sfx_wave.ogg",
+    "assets/sfx/sfx_clap.ogg",
+    "assets/sfx/sfx_pop.ogg",
+    "assets/sfx/LICENSES.md"
+)
+foreach ($f in $AudioFiles) {
+    if (-not (Test-Path (Join-Path $Root $f))) {
+        Fail "音效文件缺失：$f"
+    }
 }
 $TrayDoc = Read-Utf8 (Join-Path $Root "docs/02-平台/03-托盘与设置.md")
 if ($TrayDoc -notmatch 'Shell_NotifyIcon') {
