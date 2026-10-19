@@ -15,6 +15,7 @@ var grab_probe: GrabProbe
 var panel: FloatPanel
 var anim_library: AnimLibrary
 var anim_player: AnimPlayer
+var physics: PhysicsController
 var context_menu: PopupMenu
 
 var palette_data: Dictionary = {}
@@ -73,6 +74,10 @@ func _ready() -> void:
 		anim_player.play(anim_override, 0.0)
 	if anim_time > 0.0 and anim_player.current != null:
 		anim_player.seek(anim_time / anim_player.current.length)
+
+	physics = PhysicsController.new()
+	add_child(physics)
+	physics.setup(definition)
 	anim_player.event_fired.connect(func(event_name: String) -> void:
 		print("[anim] event=", event_name))
 
@@ -224,7 +229,10 @@ func _process(dt: float) -> void:
 		_last_view_size = view_size
 		_apply_layout()
 	shell.poll(dt)
-	if anim_player != null:
+	if physics != null and physics.active:
+		physics.tick(dt, pose)
+		renderer.sync(pose)
+	elif anim_player != null:
 		anim_player.tick(dt, pose)
 		RigState.resolve(definition, pose)
 		renderer.sync(pose)
@@ -240,7 +248,10 @@ func _apply_layout() -> void:
 		return
 	shell.content_size = view_size
 	_place_pet()
-	if anim_player != null:
+	if physics != null and physics.active:
+		physics.set_bounds(shell.local_floor_y(), 0.0, view_size.x)
+		physics.solver.write_pose(pose)
+	elif anim_player != null:
 		anim_player.apply(pose)
 	RigState.resolve(definition, pose)
 	renderer.sync(pose)
@@ -262,8 +273,13 @@ func _on_palette_cycle() -> void:
 
 
 func _on_animation_selected(clip_name: StringName) -> void:
+	if physics != null:
+		physics.stop()
 	if anim_player != null:
 		anim_player.play(clip_name, 0.2)
+		anim_player.apply(pose)
+		RigState.resolve(definition, pose)
+		renderer.sync(pose)
 		print("[anim] clip=", clip_name)
 		if panel != null:
 			panel.set_animation_selected(clip_name)
@@ -283,6 +299,8 @@ func _update_anim_highlight() -> void:
 func _on_animation_time_seek(normalized: float) -> void:
 	if anim_player == null:
 		return
+	if physics != null:
+		physics.stop()
 	anim_player.seek(normalized)
 	RigState.resolve(definition, pose)
 	renderer.sync(pose)
@@ -317,11 +335,37 @@ func _build_context_menu() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventMouseButton) or not event.pressed:
+	if event is InputEventMouseMotion and physics != null and physics.grabbing:
+		var motion_local := shell.global_to_local(DisplayServer.mouse_get_position())
+		physics.drag(motion_local)
+		get_viewport().set_input_as_handled()
 		return
-	if event.button_index != MOUSE_BUTTON_RIGHT:
+	if not (event is InputEventMouseButton):
 		return
 	var local := shell.global_to_local(DisplayServer.mouse_get_position())
+	if event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed and _is_over_pet(local):
+			var view_size := get_viewport().get_visible_rect().size
+			if not physics.active:
+				var started := physics.start_with_pose(pose, local,
+						shell.local_floor_y(), 0.0, view_size.x)
+				if not started:
+					physics.stop()
+					return
+			elif not physics.begin_drag(local, shell.local_floor_y(),
+					0.0, view_size.x):
+				return
+			passthrough.lock_full(shell.content_size)
+			get_viewport().set_input_as_handled()
+			print("[physics] grab local=", local)
+		elif not event.pressed and physics.grabbing:
+			physics.end_drag()
+			passthrough.unlock()
+			get_viewport().set_input_as_handled()
+			print("[physics] release")
+		return
+	if event.button_index != MOUSE_BUTTON_RIGHT or not event.pressed:
+		return
 	if not _is_over_pet(local):
 		return
 	get_viewport().set_input_as_handled()

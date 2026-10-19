@@ -17,6 +17,7 @@ func _initialize() -> void:
 	_test_rig()
 	_test_fk()
 	_test_animation()
+	_test_physics()
 	_test_passthrough()
 	_test_renderer()
 	_test_taskbar_geometry()
@@ -272,6 +273,47 @@ func _test_animation() -> void:
 	_check(events.has("step_l"), "walk emits step_l")
 	_check(events.has("step_r"), "walk emits step_r")
 	player.free()
+
+
+func _test_physics() -> void:
+	var definition := RigDefinition.new()
+	definition.load_from_file("res://assets/rigs/stickman.json")
+	definition.compile()
+	var pose := definition.create_rest_pose()
+	pose.root_pos = Vector2(500.0, 300.0)
+	RigState.resolve(definition, pose)
+
+	var solver := RagdollSolver.new()
+	solver.build(definition)
+	solver.start_from_pose(pose, 900.0, 0.0, 1000.0)
+	for i in 600:
+		solver.step(1.0 / 120.0)
+	var max_error := 0.0
+	for b in definition.bones:
+		var dist := solver.pos[b.start_idx].distance_to(solver.pos[b.end_idx])
+		max_error = maxf(max_error, absf(dist - b.length))
+	_check(max_error < definition.bones[0].length * 0.02, "PBD bone length error")
+
+	var grab_solver := RagdollSolver.new()
+	grab_solver.build(definition)
+	grab_solver.start_from_pose(pose, 900.0, 0.0, 1000.0)
+	var bone := 0
+	var t := 0.5
+	var point := grab_solver.pos[definition.bones[bone].start_idx].lerp(
+			grab_solver.pos[definition.bones[bone].end_idx], t)
+	grab_solver.begin_grab(bone, t, point)
+	grab_solver.grab_target = point + Vector2(120.0, 0.0)
+	for i in 60:
+		grab_solver.step(1.0 / 120.0)
+	var current := grab_solver.pos[definition.bones[bone].start_idx].lerp(
+			grab_solver.pos[definition.bones[bone].end_idx], t)
+	_check(current.distance_to(grab_solver.grab_target) < 1.0,
+			"PBD grab point")
+	var finite := true
+	for p in solver.pos:
+		if not is_finite(p.x) or not is_finite(p.y):
+			finite = false
+	_check(finite, "PBD finite positions")
 
 
 func _test_passthrough() -> void:
