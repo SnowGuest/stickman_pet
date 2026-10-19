@@ -72,6 +72,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full -Releas
 | 门禁（含 Godot 导入） | `... -Full -GodotExe "C:\...\Godot_v4.7.2-stable_win64.exe"` |
 | 发布 staging 校验 | `... -ReleaseCheck` |
 | 生成发布包 | `powershell -ExecutionPolicy Bypass -File tools\build_release.ps1` |
+| 穿透 50 点验收 | `powershell -ExecutionPolicy Bypass -File tools\test_passthrough.ps1` |
+| 单实例验收 | `powershell -ExecutionPolicy Bypass -File tools\test_single_instance.ps1` |
+| 启动耗时验收 | `powershell -ExecutionPolicy Bypass -File tools\test_startup.ps1` |
+| Alt+Tab 隐藏验收 | `powershell -ExecutionPolicy Bypass -File tools\test_alt_tab.ps1` |
+| 退出清理验收 | `powershell -ExecutionPolicy Bypass -File tools\test_exit.ps1` |
 | 安装 Git 钩子 | `powershell -ExecutionPolicy Bypass -File tools\install_hooks.ps1` |
 | 导入资源 | `Godot.exe --headless --path . --import` |
 
@@ -109,10 +114,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full -Releas
 |---|---|
 | 引擎 | Godot 4.7.2-stable，`C:\Users\16225\Desktop\Godot_v4.7.2-stable_win64.exe` |
 | 导出模板 | 已安装 4.7.2-stable（`%APPDATA%\Godot\export_templates\4.7.2.stable`） |
-| git 远端 | `origin` = `https://github.com/SnowGuest/stickman_pet.git`，push 受认证/网络阻塞 |
-| 发布产物 | `build/release/StickmanPet.exe` 117.92MB（2026-10-19） |
+| git 远端 | `origin` = `https://github.com/SnowGuest/stickman_pet.git`；提交由用户负责 |
+| 发布产物 | `build/release/StickmanPet.exe` 约 118MB（P1 版 117.96MB，2026-10-19） |
+| CI | GitHub Actions 已跑通（2026-10-19，用户确认） |
 | 字体 | Noto Sans SC 可变字体，17.7MB，OFL，已接入全局 Theme |
-| 当前阶段 | P0 收尾（98%）：真实 exe 已产出，仅远端 CI 待跑 |
+| 原生工具链 | 本机无 C++/Rust/CMake，`desktop_ext` 暂不可编译 |
+| 当前阶段 | P1 最小可视（90%）：窗口/穿透/单实例/静态火柴人/FloatPanel 完成；托盘 fallback 可用，原生扩展与抓取误差待补 |
 
 环境事实变化时更新本表，不要在新会话里假设旧状态。
 

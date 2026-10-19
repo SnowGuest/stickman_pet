@@ -1,4 +1,4 @@
-# 测试
+﻿# 测试
 
 P0 工程基线测试入口，不依赖 GUT/gdUnit4。
 
@@ -24,7 +24,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full
 - 骨骼 JSON：13 骨 / 14 关节 / head_radius=18 / 父级顺序；
 - 配色 JSON：5 色、默认橙色、橙空心头；
 - 导出预设：Windows Desktop、嵌入 PCK、icon.ico、排除 godot_ai/tests/tools；
-- GDScript 警告等级：untyped / unsafe_* / return_value_discarded 为 warn。
+- GDScript 警告等级：untyped / unsafe_* / return_value_discarded 为 warn；
+- P1：Rig 编译、FK 坐标、凸包区域、单笔路径/无描边、橙色空心头。
 
-当前：**60 项检查**，失败时退出码 1。
+当前：**100 项检查**，失败时退出码 1。
 `gate -Full` 还会执行主场景启动冒烟：`--headless --quit-after 2`。

@@ -1,0 +1,308 @@
+extends Node2D
+
+const PALETTE_ORDER := ["green", "orange", "blue", "red", "yellow"]
+
+var shell: DesktopShell
+var single: SingleInstance
+var definition: RigDefinition
+var pose: RigPose
+var renderer: StickRenderer
+var passthrough: PassthroughService
+var debug: DebugOverlay
+var tray: TrayService
+var panel: FloatPanel
+var context_menu: PopupMenu
+
+var palette_data: Dictionary = {}
+var palette_index: int = 1
+var display_multiplier: float = 1.0
+
+
+func _ready() -> void:
+	var boot_start := Time.get_ticks_msec()
+	var args := OS.get_cmdline_args()
+	args.append_array(OS.get_cmdline_user_args())
+	var debug_mode := args.has("--pet-debug")
+	var safe_mode := args.has("--safe")
+	var no_passthrough := args.has("--no-passthrough")
+	var screenshot_mode := args.has("--screenshot") or args.has("--pet-screenshot")
+	var dpi_override := 0.0
+	for arg in args:
+		if arg.begins_with("--dpi="):
+			dpi_override = float(arg.trim_prefix("--dpi="))
+
+	single = SingleInstance.new()
+	if not single.acquire():
+		push_error("已有实例在运行")
+		get_tree().quit(1)
+		return
+
+	shell = DesktopShell.new()
+	add_child(shell)
+	shell.setup(debug_mode, safe_mode, dpi_override)
+
+	if not _load_rig():
+		get_tree().quit(1)
+		return
+	pose = definition.create_rest_pose()
+	renderer = StickRenderer.new()
+	add_child(renderer)
+	renderer.setup(definition, palette_data, PALETTE_ORDER[palette_index],
+			shell.dpi_scale)
+
+	_place_pet()
+	RigState.resolve(definition, pose)
+	renderer.sync(pose)
+
+	passthrough = PassthroughService.new()
+	add_child(passthrough)
+	passthrough.setup(not no_passthrough and not debug_mode)
+	passthrough.tick(1.0 / 30.0, definition, pose)
+
+	debug = DebugOverlay.new()
+	add_child(debug)
+	debug.setup(definition, pose, renderer, passthrough)
+	debug.visible = debug_mode
+	debug.palette_cycle.connect(_on_palette_cycle)
+	debug.scale_step.connect(_on_scale_step)
+
+	panel = FloatPanel.new()
+	add_child(panel)
+	panel.setup(display_multiplier, renderer.get_stroke_width(), PALETTE_ORDER,
+			palette_index)
+	panel.visible = debug_mode
+	panel.scale_changed.connect(_set_display_multiplier)
+	panel.line_width_changed.connect(_on_line_width_changed)
+	panel.palette_selected.connect(_set_palette_by_name)
+	panel.skeleton_toggled.connect(func(enabled: bool) -> void:
+		debug.show_skeleton = enabled)
+
+	context_menu = PopupMenu.new()
+	add_child(context_menu)
+	_build_context_menu()
+	context_menu.id_pressed.connect(_on_context_menu_id)
+	context_menu.popup_hide.connect(_on_context_menu_hidden)
+
+	tray = TrayService.new()
+	add_child(tray)
+	if not screenshot_mode and tray.setup():
+		tray.command_received.connect(_on_tray_command)
+
+	if screenshot_mode:
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var image := get_viewport().get_texture().get_image()
+		var shot_path := ProjectSettings.globalize_path("user://p1_viewport.png")
+		image.save_png(shot_path)
+		print("[debug] screenshot=", shot_path)
+		get_tree().quit()
+		return
+
+	print("[main] ready screen=%d dpi=%.2f screen_dpi=%d size=%s viewport=%s window=%s boot=%dms" % [
+		shell.screen, shell.dpi_scale, DisplayServer.screen_get_dpi(shell.screen),
+		str(shell.content_size),
+		str(get_viewport().get_visible_rect().size), str(get_window().size),
+		Time.get_ticks_msec() - boot_start])
+
+
+func _load_rig() -> bool:
+	var palette_raw := FileAccess.get_file_as_string(
+			"res://assets/palettes/stickman_palette.json")
+	var parsed = JSON.parse_string(palette_raw)
+	if not (parsed is Dictionary):
+		push_error("配色 JSON 解析失败")
+		return false
+	palette_data = parsed
+
+	definition = RigDefinition.new()
+	if not definition.load_from_file("res://assets/rigs/stickman.json"):
+		push_error("骨骼 JSON 加载失败")
+		return false
+	if not definition.compile():
+		push_error("骨骼编译失败")
+		return false
+	return true
+
+
+func _place_pet() -> void:
+	var scale := definition.base_scale * shell.dpi_scale * display_multiplier
+	var bottom_pad := maxf(8.0, definition.line_width * scale * 0.5 + 2.0)
+	var floor_y := shell.content_size.y - bottom_pad
+	pose.root_pos = Vector2(shell.content_size.x * 0.5,
+			floor_y - 50.0 * scale)
+	pose.root_angle = 0.0
+	_apply_display_pose()
+	RigState.resolve(definition, pose)
+	_fit_pose_in_view(32.0, bottom_pad)
+	RigState.resolve(definition, pose)
+
+
+func _fit_pose_in_view(top_margin: float, bottom_margin: float) -> void:
+	var view := Rect2(Vector2(top_margin, top_margin),
+			Vector2(shell.content_size.x - top_margin * 2.0,
+					shell.content_size.y - top_margin - bottom_margin))
+	var render_scale := definition.base_scale * shell.dpi_scale * display_multiplier
+	var raw := definition.pose_bounds(pose)
+	var bounds := Rect2(pose.root_pos + (raw.position - pose.root_pos) * render_scale,
+			raw.size * render_scale)
+	var shift := Vector2.ZERO
+	if bounds.end.y > view.end.y:
+		shift.y -= bounds.end.y - view.end.y
+	elif bounds.position.y < view.position.y:
+		shift.y += view.position.y - bounds.position.y
+	if bounds.end.x > view.end.x:
+		shift.x -= bounds.end.x - view.end.x
+	elif bounds.position.x < view.position.x:
+		shift.x += view.position.x - bounds.position.x
+	pose.root_pos += shift
+
+
+func _apply_display_pose() -> void:
+	# 静止展示用轻微 A-pose；骨骼 JSON 的 rest 仍保持不变。
+	_set_rel_raw(&"upper_arm_l", -150.0)
+	_set_rel_raw(&"upper_arm_r", 150.0)
+	_set_rel_raw(&"forearm_l", 0.0)
+	_set_rel_raw(&"forearm_r", 0.0)
+	_set_rel_raw(&"thigh_l", 100.0)
+	_set_rel_raw(&"thigh_r", 80.0)
+	_set_rel_raw(&"shin_l", -10.0)
+	_set_rel_raw(&"shin_r", 10.0)
+	_set_rel_raw(&"foot_l", 90.0)
+	_set_rel_raw(&"foot_r", -90.0)
+
+
+func _set_rel_raw(bone_id: StringName, rel_deg: float) -> void:
+	for i in definition.bones.size():
+		if definition.bones[i].id == bone_id:
+			pose.rel[i] = deg_to_rad(rel_deg)
+			return
+
+
+func _process(dt: float) -> void:
+	if shell == null:
+		return
+	shell.poll(dt)
+	if passthrough != null:
+		passthrough.tick(dt, definition, pose)
+
+
+func _on_palette_cycle() -> void:
+	var next := (palette_index + 1) % PALETTE_ORDER.size()
+	_set_palette_by_name(PALETTE_ORDER[next])
+
+
+func _set_palette_by_name(palette_name: String) -> void:
+	var index := PALETTE_ORDER.find(palette_name)
+	if index < 0:
+		return
+	palette_index = index
+	renderer.set_palette(palette_data, palette_name)
+	print("[debug] palette=", palette_name)
+
+
+func _on_line_width_changed(value: float) -> void:
+	renderer.set_line_width(value)
+	print("[debug] line_width=", value)
+
+
+func _build_context_menu() -> void:
+	context_menu.add_item("显示/隐藏", 1)
+	context_menu.add_item("静音", 2)
+	context_menu.add_separator()
+	context_menu.add_item("缩放 1.25", 3)
+	context_menu.add_item("缩放 1.50", 4)
+	context_menu.add_item("缩放 2.00", 5)
+	context_menu.add_separator()
+	context_menu.add_item("退出", 9)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton) or not event.pressed:
+		return
+	if event.button_index != MOUSE_BUTTON_RIGHT:
+		return
+	var local := shell.global_to_local(DisplayServer.mouse_get_position())
+	if not _is_over_pet(local):
+		return
+	get_viewport().set_input_as_handled()
+	passthrough.lock_full(shell.content_size)
+	context_menu.popup(Rect2i(Vector2i(local), Vector2i(220, 0)))
+
+
+func _is_over_pet(local: Vector2) -> bool:
+	var region := passthrough.build_region(definition, pose)
+	return region.size() >= 3 and Geometry2D.is_point_in_polygon(local, region)
+
+
+func _on_context_menu_hidden() -> void:
+	passthrough.unlock()
+
+
+func _on_context_menu_id(id: int) -> void:
+	match id:
+		1:
+			_on_tray_command("toggle")
+		2:
+			_on_tray_command("mute")
+		3:
+			_on_tray_command("scale:1.25")
+		4:
+			_on_tray_command("scale:1.50")
+		5:
+			_on_tray_command("scale:2.00")
+		9:
+			get_tree().quit()
+
+
+func _on_scale_step(delta: float) -> void:
+	_set_display_multiplier(display_multiplier + delta)
+
+
+func _set_display_multiplier(value: float) -> void:
+	display_multiplier = clampf(value, 0.8, 2.0)
+	renderer.set_view_scale(definition.base_scale * shell.dpi_scale
+			* display_multiplier)
+	_place_pet()
+	RigState.resolve(definition, pose)
+	renderer.sync(pose)
+	print("[debug] scale=", display_multiplier)
+
+
+func _on_tray_command(command: String) -> void:
+	match command:
+		"quit":
+			get_tree().quit()
+		"show":
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			DisplayServer.window_move_to_foreground()
+		"toggle":
+			_toggle_visible()
+		"mute":
+			var bus := AudioServer.get_bus_index("Master")
+			AudioServer.set_bus_mute(bus, not AudioServer.is_bus_mute(bus))
+		"topmost":
+			var flag := DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP
+			DisplayServer.window_set_flag(flag,
+					not DisplayServer.window_get_flag(flag))
+		_:
+			if command.begins_with("scale:"):
+				var value := float(command.trim_prefix("scale:"))
+				if value > 0.0:
+					_set_display_multiplier(value)
+
+
+func _toggle_visible() -> void:
+	if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MINIMIZED:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_move_to_foreground()
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_MINIMIZED)
+
+
+func _exit_tree() -> void:
+	if shell != null:
+		shell.restore()
+	if tray != null:
+		tray.shutdown()
+	if single != null:
+		single.release()

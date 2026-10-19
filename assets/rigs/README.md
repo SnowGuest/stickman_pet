@@ -1,4 +1,4 @@
-# 骨骼数据
+﻿# 骨骼数据
 
 文件：`stickman.json`
 来源：[骨骼与动画](../../docs/03-仿真/01-骨骼与动画.md) 第 2.1 节拓扑表。
@@ -11,7 +11,8 @@
 - `limit_lo_deg` / `limit_hi_deg` 是**相对静止角**的限位；
 - `rest_rel_deg` 由运行时 `compile()` 计算，不写进 JSON，避免两份真源；
 - `head_radius = 18.0` 为美术调参值，覆盖类默认 13.0；
-- `width` 为每根骨的线宽，5.0–6.0；渲染器可再乘全局缩放。
+- `render.line_width = 6.0` 是全身单笔路径的统一线宽；`width` 仅保留给物理/命中参考，P1 渲染不再逐骨取宽；
+- `render.stroke = "single_path"`：17 点单条 `Line2D`，纯色、无 halo、无描边。
 
 ## 派生值（供核对）
 

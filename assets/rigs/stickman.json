@@ -8,9 +8,8 @@
   "render": {
     "line_width": 6.0,
     "head_line_width": 6.0,
-    "halo_dark": 2.5,
-    "halo_light": 1.0,
-    "joint_cap": "round"
+    "joint_cap": "round",
+    "stroke": "single_path"
   },
   "joints": [
     "pelvis",
