@@ -18,6 +18,7 @@ var context_menu: PopupMenu
 var palette_data: Dictionary = {}
 var palette_index: int = 1
 var display_multiplier: float = 1.0
+var _last_view_size: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -56,6 +57,7 @@ func _ready() -> void:
 	_place_pet()
 	RigState.resolve(definition, pose)
 	renderer.sync(pose)
+	_last_view_size = get_viewport().get_visible_rect().size
 
 	passthrough = PassthroughService.new()
 	add_child(passthrough)
@@ -192,9 +194,35 @@ func _set_rel_raw(bone_id: StringName, rel_deg: float) -> void:
 func _process(dt: float) -> void:
 	if shell == null:
 		return
+	var view_size := get_viewport().get_visible_rect().size
+	if view_size != _last_view_size and view_size.x > 1.0 and view_size.y > 1.0:
+		_last_view_size = view_size
+		_apply_layout()
 	shell.poll(dt)
 	if passthrough != null:
 		passthrough.tick(dt, definition, pose)
+
+
+func _apply_layout() -> void:
+	if renderer == null or definition == null or pose == null:
+		return
+	var view_size := get_viewport().get_visible_rect().size
+	if view_size.x <= 1.0 or view_size.y <= 1.0:
+		return
+	shell.content_size = view_size
+	_place_pet()
+	RigState.resolve(definition, pose)
+	renderer.sync(pose)
+	if grab_probe != null:
+		grab_probe.refresh_target()
+	if passthrough != null:
+		passthrough.unlock()
+		passthrough.tick(0.0, definition, pose)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+		_apply_layout()
 
 
 func _on_palette_cycle() -> void:

@@ -30,6 +30,10 @@ func _process(_dt: float) -> void:
 
 func _probe(screen: Vector2) -> void:
 	var local := _shell.global_to_local(screen)
+	_write_result(screen, local)
+
+
+func _write_result(screen: Vector2, local: Vector2) -> void:
 	var nearest := -1
 	var nearest_distance := INF
 	for i in _pose.joint_pos.size():
@@ -63,8 +67,12 @@ func _write_target() -> void:
 		"local": [local.x, local.y],
 		"joint": "chest",
 	})
-	# 启动自检：用目标屏幕点反算最近关节，拦截坐标系回归。
-	_probe(screen)
+	# 启动自检：目标局部点反算最近关节，拦截坐标系回归。
+	_write_result(screen, local)
+
+
+func refresh_target() -> void:
+	_write_target()
 
 
 func _visual_joint(index: int) -> Vector2:
