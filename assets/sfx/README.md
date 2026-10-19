@@ -10,7 +10,7 @@
 | `sfx_wave_whoosh.ogg` | `Swoosh.ogg` | 0.16s | 单次挥动起手 whoosh |
 | `sfx_sit.ogg` | `Sit.ogg` | 0.93s | 坐下 |
 | `sfx_wave.ogg` | `Wave.ogg` | 0.89s | 连续挥手（循环） |
-| `sfx_clap.ogg` | `Clap.ogg` | 1.27s | 鼓掌/得意 |
+| `sfx_clap.ogg` | `Clap.ogg` | 1.27s | 鼓掌 |
 | `sfx_pop.ogg` | `Pop.ogg` | 0.07s | 戳/弹出 |
 
 ## 脚步映射
