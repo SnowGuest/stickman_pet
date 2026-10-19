@@ -96,6 +96,7 @@ $RequiredFiles = @(
     "docs/04-表现/03-音频与界面.md",
     "docs/05-行为/01-状态机与交互.md",
     "docs/05-行为/02-光标交互规范.md",
+    "docs/05-行为/03-内置行为清单.md",
     "docs/06-工程/01-配置与持久化.md",
     "docs/06-工程/02-规范测试与发布.md",
     "docs/06-工程/03-版本控制与CI.md",
@@ -326,12 +327,16 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.8') {
-    Fail "appendix 文档版本未更新到 v1.8"
+if ($Appendix -notmatch 'v1\.9') {
+    Fail "appendix 文档版本未更新到 v1.9"
 }
 $CursorDoc = Read-Utf8 (Join-Path $Root "docs/05-行为/02-光标交互规范.md")
 if ($CursorDoc -notmatch 'GlobalMouse') {
     Fail "光标交互文档缺少 GlobalMouse 方案"
+}
+$Activities = Read-Utf8 (Join-Path $Root "docs/05-行为/03-内置行为清单.md")
+if ($Activities -notmatch 'B10') {
+    Fail "内置行为清单缺少 B10"
 }
 $AiDoc = Read-Utf8 (Join-Path $Root "docs/07-AI集成/README.md")
 if ($AiDoc -notmatch 'Godot 做 Server') {

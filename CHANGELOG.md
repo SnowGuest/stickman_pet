@@ -12,6 +12,7 @@
 - 最终产品定义：像 Alan Becker 的六条特征、体验剧本、表演层缺口
 - AI 集成：Go 客户端 + 本机 WebSocket 协议、模式仲裁、轨道 A（v0.5.5-ai）
 - 光标交互：长按抓取、按住左键变实体推/撞、GlobalMouse 全局按键
+- 10 条无 AI 自主小剧场：探头、散步、追光标、木头人、躲猫猫、晃腿、打瞌睡、影子拳击、搬方块、装死
 - 项目门禁：AGENTS 契约、`tools/gate.ps1`、Git 钩子、CI 静态检查
 - 中文字体：Noto Sans SC（OFL 1.1）与全局 Theme
 - 发布构建脚本：staging 排除 `addons/godot_ai`、移除 `_mcp_game_helper`
