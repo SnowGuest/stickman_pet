@@ -329,8 +329,8 @@ if ($Roadmap -notmatch '当前状态') {
     Fail "路线图缺少“当前状态”章节"
 }
 $Appendix = Read-Utf8 (Join-Path $Root "docs/appendix/01-术语与API.md")
-if ($Appendix -notmatch 'v1\.18') {
-    Fail "appendix 文档版本未更新到 v1.18"
+if ($Appendix -notmatch 'v1\.19') {
+    Fail "appendix 文档版本未更新到 v1.19"
 }
 $PaletteDoc = Read-Utf8 (Join-Path $Root "docs/04-表现/05-配色与无脸规范.md")
 if ($PaletteDoc -notmatch '#FF6600' -or $PaletteDoc -notmatch '空心头') {
@@ -354,6 +354,10 @@ foreach ($f in $AudioFiles) {
     if (-not (Test-Path (Join-Path $Root $f))) {
         Fail "音效文件缺失：$f"
     }
+}
+$WaveImport = Read-Utf8 (Join-Path $Root "assets/sfx/sfx_wave.ogg.import")
+if ($WaveImport -notmatch 'loop=true') {
+    Fail "连续挥手 sfx_wave.ogg 未设为循环"
 }
 $IconFiles = @(
     "assets/icons/icon.ico",

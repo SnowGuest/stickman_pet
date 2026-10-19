@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/sfx_wave.ogg-48470e04217948f1c201737e53e5e83b
 
 [params]
 
-loop=false
+loop=true
 loop_offset=0
 bpm=0
 beat_count=0
