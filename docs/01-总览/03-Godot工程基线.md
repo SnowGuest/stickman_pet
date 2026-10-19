@@ -27,18 +27,19 @@
 
 | 配置 | 当前 | 目标 | 优先级 |
 |---|---|---|---|
-| 主场景 | 未设置 | `res://scenes/main.tscn` | P0 |
-| 窗口透明 | 未设置 | `transparent=true` + per-pixel allowed | P0 |
-| 无边框/置顶 | 未设置 | 均 true | P0 |
-| stretch | `canvas_items` | **`disabled`** | P0（否则抓取偏移） |
-| 渲染背景透明 | 未设置 | `rendering/viewport/transparent_background=true` | P0 |
-| 版本号 | 未设置 | `application/config/version="0.1.0"` | P0 |
-| autoload | 仅 `_mcp_game_helper` | 仅 `App`；开发助手发布版移除 | P0 |
+| 主场景 | `res://scenes/main.tscn`（占位） | 正式入口场景 | P0 |
+| 窗口透明 | 已开启 | `transparent=true` + per-pixel allowed | P0 |
+| 无边框/置顶 | 已开启 | 均 true | P0 |
+| stretch | `disabled` | **`disabled`** | P0 |
+| 渲染背景透明 | `true` | `rendering/viewport/transparent_background=true` | P0 |
+| 版本号 | `0.1.0` | `application/config/version` | P0 |
+| 中文主题 | 已接入 Noto Sans SC | 全局 Theme 生效 | P0 |
+| autoload | `_mcp_game_helper`（仅开发） | 发布脚本自动移除 | P0 |
 | 输入映射 | 无 | 见第 5 章 | P1 |
 | 2D 物理层 | 默认 | Pet/Item/World | P1 |
 | 导入预设 | 无 | 纹理 nearest、音频 ogg | P1 |
-| 导出预设 | 无 | Windows Desktop | P1 |
-| git | **无仓库** | 初始化并提交 | P0 |
+| 导出预设 | `export_presets.cfg` 已创建 | Windows Desktop | P1 |
+| git | 已初始化，`origin/main` | 初始化并提交 | P0 |
 
 ---
 
@@ -63,6 +64,10 @@ window/size/always_on_top=true
 window/size/resizable=false
 window/stretch/mode="disabled"
 window/dpi/allow_hidpi=true
+
+[gui]
+
+theme/custom="res://assets/themes/pet_theme.tres"
 
 [rendering]
 
@@ -193,7 +198,7 @@ viewport/transparent_background=true
 
 - 插件只用于开发期，不在运行时依赖。
 - 引入前记录到 [合规文档](../00-项目/03-风险与合规.md)。
-- 发布前用导出过滤排除 `addons/`（除运行时必需的）。
+- 发布前用 `tools/build_release.ps1` 复制 staging、删除 `addons/godot_ai` 与 `_mcp_game_helper`，再导出；不要直接对开发目录导出。
 
 ---
 
@@ -216,6 +221,8 @@ build/
 *.png binary
 *.ogg binary
 *.wav binary
+*.ttf binary
+*.otf binary
 ```
 
 - `.vscode/settings.json` 提交（团队共享），`workspaceStorage` 忽略。
@@ -226,15 +233,17 @@ build/
 
 ## 12. 落地清单（P0）
 
-- [ ] `git init` + 首次提交
-- [ ] 修正 `window/stretch/mode` 为 `disabled`
-- [ ] 补齐透明/无边框/置顶/背景透明设置
-- [ ] 设置主场景与版本号
-- [ ] 新建 `App` autoload，移除 `_mcp_game_helper` 的发布依赖
+- [x] `git init` + 首次提交 + 远端合并
+- [x] 修正 `window/stretch/mode` 为 `disabled`
+- [x] 补齐透明/无边框/置顶/背景透明设置
+- [x] 设置主场景与版本号
+- [x] 中文字体 + 全局 Theme
+- [x] 发布脚本移除 `_mcp_game_helper`（开发期仍保留）
+- [ ] 创建 `App` autoload
 - [ ] 创建输入动作（至少 `pet_primary` / `pet_secondary`）
 - [ ] 命名 2D 物理层与组
 - [ ] 建立纹理/音频导入预设
-- [ ] 创建 Windows 导出预设（暂不导出）
+- [x] 创建 Windows 导出预设与构建脚本
 - [ ] CI 跑通 headless 导入
 
 ---
