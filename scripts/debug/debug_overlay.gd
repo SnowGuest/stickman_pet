@@ -2,7 +2,6 @@ class_name DebugOverlay
 extends Node2D
 
 signal palette_cycle
-signal scale_step(delta: float)
 
 var definition: RigDefinition
 var pose: RigPose
@@ -32,10 +31,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			palette_cycle.emit()
 		KEY_F7:
 			show_passthrough = not show_passthrough
-		KEY_BRACKETLEFT:
-			scale_step.emit(-0.05)
-		KEY_BRACKETRIGHT:
-			scale_step.emit(0.05)
 
 
 func _process(_dt: float) -> void:

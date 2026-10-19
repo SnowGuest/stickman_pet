@@ -1,18 +1,16 @@
 class_name FloatPanel
 extends PanelContainer
 
-signal scale_changed(value: float)
 signal line_width_changed(value: float)
 signal palette_selected(name: String)
 signal skeleton_toggled(enabled: bool)
 
-var _scale: HSlider
 var _width: HSlider
 var _palette: OptionButton
 var _skeleton: CheckBox
 
 
-func setup(initial_scale: float, initial_width: float, palette_names: Array,
+func setup(initial_width: float, palette_names: Array,
 		palette_index: int) -> void:
 	position = Vector2(16.0, 16.0)
 	custom_minimum_size = Vector2(280.0, 0.0)
@@ -25,19 +23,6 @@ func setup(initial_scale: float, initial_width: float, palette_names: Array,
 	var title := Label.new()
 	title.text = "调试参数"
 	box.add_child(title)
-
-	var scale_label := Label.new()
-	scale_label.text = "缩放 %.2f" % initial_scale
-	box.add_child(scale_label)
-	_scale = HSlider.new()
-	_scale.min_value = 0.8
-	_scale.max_value = 2.0
-	_scale.step = 0.05
-	_scale.value = initial_scale
-	box.add_child(_scale)
-	_scale.value_changed.connect(func(value: float) -> void:
-		scale_label.text = "缩放 %.2f" % value
-		scale_changed.emit(value))
 
 	var width_label := Label.new()
 	width_label.text = "线宽 %.1f" % initial_width

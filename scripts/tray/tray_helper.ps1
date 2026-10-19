@@ -73,17 +73,6 @@ $topItem.add_Click({
 [void]$menu.Items.Add($topItem)
 [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
-foreach ($scale in @("1.25", "1.50", "2.00")) {
-    $item = New-Object System.Windows.Forms.ToolStripMenuItem("缩放 $scale")
-    $item.Tag = $scale
-    $item.add_Click({
-        param($sender, $eventArgs)
-        Write-Command ("scale:" + $sender.Tag)
-    })
-    [void]$menu.Items.Add($item)
-}
-[void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
-
 $quitItem = New-Object System.Windows.Forms.ToolStripMenuItem("退出")
 $quitItem.add_Click({
     param($sender, $eventArgs)

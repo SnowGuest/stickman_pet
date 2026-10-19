@@ -67,10 +67,6 @@ internal static class TrayHelper
         AddCommand(menu, "静音", "mute");
         AddCommand(menu, "置顶", "topmost");
         menu.Items.Add(new ToolStripSeparator());
-        AddCommand(menu, "缩放 1.25", "scale:1.25");
-        AddCommand(menu, "缩放 1.50", "scale:1.50");
-        AddCommand(menu, "缩放 2.00", "scale:2.00");
-        menu.Items.Add(new ToolStripSeparator());
         var quit = new ToolStripMenuItem("退出");
         quit.Click += delegate
         {

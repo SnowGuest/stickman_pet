@@ -17,7 +17,6 @@ var context_menu: PopupMenu
 
 var palette_data: Dictionary = {}
 var palette_index: int = 1
-var display_multiplier: float = 1.0
 var _last_view_size: Vector2 = Vector2.ZERO
 
 
@@ -54,9 +53,7 @@ func _ready() -> void:
 	renderer.setup(definition, palette_data, PALETTE_ORDER[palette_index],
 			shell.dpi_scale)
 
-	_place_pet()
-	RigState.resolve(definition, pose)
-	renderer.sync(pose)
+	_apply_layout()
 	_last_view_size = get_viewport().get_visible_rect().size
 
 	passthrough = PassthroughService.new()
@@ -69,14 +66,11 @@ func _ready() -> void:
 	debug.setup(definition, pose, renderer, passthrough)
 	debug.visible = debug_mode
 	debug.palette_cycle.connect(_on_palette_cycle)
-	debug.scale_step.connect(_on_scale_step)
 
 	panel = FloatPanel.new()
 	add_child(panel)
-	panel.setup(display_multiplier, renderer.get_stroke_width(), PALETTE_ORDER,
-			palette_index)
+	panel.setup(renderer.get_stroke_width(), PALETTE_ORDER, palette_index)
 	panel.visible = debug_mode
-	panel.scale_changed.connect(_set_display_multiplier)
 	panel.line_width_changed.connect(_on_line_width_changed)
 	panel.palette_selected.connect(_set_palette_by_name)
 	panel.skeleton_toggled.connect(func(enabled: bool) -> void:
@@ -138,7 +132,7 @@ func _load_rig() -> bool:
 
 
 func _place_pet() -> void:
-	var scale := definition.base_scale * shell.dpi_scale * display_multiplier
+	var scale := definition.base_scale * shell.dpi_scale
 	var bottom_pad := maxf(8.0, definition.line_width * scale * 0.5 + 2.0)
 	var floor_y := shell.content_size.y - bottom_pad
 	pose.root_pos = Vector2(shell.content_size.x * 0.5,
@@ -154,7 +148,7 @@ func _fit_pose_in_view(top_margin: float, bottom_margin: float) -> void:
 	var view := Rect2(Vector2(top_margin, top_margin),
 			Vector2(shell.content_size.x - top_margin * 2.0,
 					shell.content_size.y - top_margin - bottom_margin))
-	var render_scale := definition.base_scale * shell.dpi_scale * display_multiplier
+	var render_scale := definition.base_scale * shell.dpi_scale
 	var raw := definition.pose_bounds(pose)
 	var bounds := Rect2(pose.root_pos + (raw.position - pose.root_pos) * render_scale,
 			raw.size * render_scale)
@@ -248,10 +242,6 @@ func _build_context_menu() -> void:
 	context_menu.add_item("显示/隐藏", 1)
 	context_menu.add_item("静音", 2)
 	context_menu.add_separator()
-	context_menu.add_item("缩放 1.25", 3)
-	context_menu.add_item("缩放 1.50", 4)
-	context_menu.add_item("缩放 2.00", 5)
-	context_menu.add_separator()
 	context_menu.add_item("退出", 9)
 
 
@@ -292,28 +282,8 @@ func _on_context_menu_id(id: int) -> void:
 			_on_tray_command("toggle")
 		2:
 			_on_tray_command("mute")
-		3:
-			_on_tray_command("scale:1.25")
-		4:
-			_on_tray_command("scale:1.50")
-		5:
-			_on_tray_command("scale:2.00")
 		9:
 			get_tree().quit()
-
-
-func _on_scale_step(delta: float) -> void:
-	_set_display_multiplier(display_multiplier + delta)
-
-
-func _set_display_multiplier(value: float) -> void:
-	display_multiplier = clampf(value, 0.8, 2.0)
-	renderer.set_view_scale(definition.base_scale * shell.dpi_scale
-			* display_multiplier)
-	_place_pet()
-	RigState.resolve(definition, pose)
-	renderer.sync(pose)
-	print("[debug] scale=", display_multiplier)
 
 
 func _on_tray_command(command: String) -> void:
@@ -332,11 +302,6 @@ func _on_tray_command(command: String) -> void:
 			var flag := DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP
 			DisplayServer.window_set_flag(flag,
 					not DisplayServer.window_get_flag(flag))
-		_:
-			if command.begins_with("scale:"):
-				var value := float(command.trim_prefix("scale:"))
-				if value > 0.0:
-					_set_display_multiplier(value)
 
 
 func _toggle_visible() -> void:
