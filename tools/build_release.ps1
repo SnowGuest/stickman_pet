@@ -24,6 +24,8 @@ param(
     [string]$GodotExe = "C:\Users\16225\Desktop\Godot_v4.7.2-stable_win64.exe",
     [string]$Preset = "Windows Desktop",
     [string]$OutDir = "",
+    [string]$TemplateVersion = "4.7.2.stable",
+    [string]$TemplateDir = "",
     [switch]$NoExport
 )
 
@@ -114,6 +116,18 @@ if ($NoExport) {
 Write-Host "[4/5] 导出（模板需已安装）"
 if (-not (Test-Path -LiteralPath $GodotExe)) {
     throw "找不到 Godot：$GodotExe（用 -GodotExe 指定）"
+}
+if ([string]::IsNullOrWhiteSpace($TemplateDir)) {
+    $TemplateDir = Join-Path (Join-Path $env:APPDATA "Godot\export_templates") $TemplateVersion
+}
+$TemplateExe = Join-Path $TemplateDir "windows_release_x86_64.exe"
+if (-not (Test-Path -LiteralPath $TemplateExe)) {
+    throw @"
+导出模板未安装或版本不匹配。
+期望：$TemplateExe
+处理：Godot 编辑器 → 编辑器 → 管理导出模板 → 下载并安装 4.7.2。
+或用 -TemplateVersion/-TemplateDir 指向已安装模板目录。
+"@
 }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $Exe = Join-Path $OutDir "StickmanPet.exe"
