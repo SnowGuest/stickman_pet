@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
@@ -20,6 +20,8 @@
 - walk 改为前倾低头看地面的自然步态，头圆沿颈方向偏移
 - 2D/3D 火柴人加回 L 形双脚：双脚朝同一方向，脚长从 10 缩短到 3
 - 空心头不画 L 脚；实心头头径为空心头的 3/4 并保留 L 脚
+- 新增 `cheer` 欢呼动画：双臂高举、双腿分开，接入 PetBrain 与右键菜单
+- 手臂缩短到 upper 26 / forearm 24，避免过长
 - P6 绿色版：`tools/package_release.ps1` 生成 zip + SHA256；180s soak
 - 版本迭代目录：v0.1.0–v1.0.0 的迭代说明与更新记录
 - README：开源项目介绍、状态、路线图与快速开始
