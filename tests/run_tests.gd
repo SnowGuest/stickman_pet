@@ -353,8 +353,14 @@ func _test_physics() -> void:
 	var chest := definition.joint_pos(held_pose, &"chest")
 	var started := controller.start_with_pose(held_pose, chest, 900.0, 0.0, 1000.0)
 	_check(started, "physics controller starts grab")
+	var angle_start := (controller.solver.pos[int(definition.joint_index[&"chest"])]
+			- controller.solver.pos[int(definition.joint_index[&"pelvis"])]).angle()
 	for i in 180:
 		controller.tick(1.0 / 60.0, held_pose)
+	var angle_end := (controller.solver.pos[int(definition.joint_index[&"chest"])]
+			- controller.solver.pos[int(definition.joint_index[&"pelvis"])]).angle()
+	_check(absf(wrapf(angle_end - angle_start, -PI, PI)) < 0.15,
+			"held grab does not self-rotate")
 	var held_y := held_pose.root_pos.y
 	controller.end_drag()
 	for i in 60:
@@ -362,6 +368,9 @@ func _test_physics() -> void:
 	_check(held_pose.root_pos.y > held_y + 10.0, "release falls after long hold")
 	_check(not controller.solver.sleeping or held_pose.root_pos.y > 800.0,
 			"release does not sleep mid-air")
+	for i in 120:
+		controller.tick(1.0 / 60.0, held_pose)
+	_check(controller.solver.is_supported(), "release reaches floor")
 	controller.free()
 
 

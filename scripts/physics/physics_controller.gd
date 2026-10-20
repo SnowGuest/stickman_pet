@@ -162,7 +162,7 @@ func _apply_tone(grab_bone: int) -> void:
 			&"foot_l": 0.04, &"foot_r": 0.04,
 		}
 	for i in definition.bones.size():
-		solver.tone[i] = float(profile.get(definition.bones[i].id, 0.02)) * 0.15
+		solver.tone[i] = 0.0
 		solver.world_bias[i] = 0.0
 	var spine_bone := -1
 	for i in definition.bones.size():
@@ -170,5 +170,5 @@ func _apply_tone(grab_bone: int) -> void:
 			spine_bone = i
 			break
 	if spine_bone >= 0 and bone_id == &"spine":
-		# 只有抓腰时给躯干一点世界空间支撑；抓手/头/脚完全自由摆动。
-		solver.world_bias[spine_bone] = 0.35
+		# 抓腰时也不主动“扶正”，只保留被动重力/限位，避免绕抓点自转。
+		solver.world_bias[spine_bone] = 0.0
