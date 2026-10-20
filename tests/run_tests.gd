@@ -408,6 +408,28 @@ func _test_physics() -> void:
 		lift_last = a
 	_check(absf(lift_turn) < 0.6, "lift does not self-spin")
 	lift.free()
+
+	var slide := PhysicsController.new()
+	slide.setup(definition)
+	var slide_pose := definition.create_rest_pose()
+	slide_pose.root_pos = Vector2(500.0, 500.0)
+	RigState.resolve(definition, slide_pose)
+	var slide_chest := definition.joint_pos(slide_pose, &"chest")
+	slide.start_with_pose(slide_pose, slide_chest, 900.0, 0.0, 1000.0)
+	var y_lo := INF
+	var y_hi := -INF
+	for i in 90:
+		slide.drag(slide_chest + Vector2(100.0, 0.0))
+		slide.tick(1.0 / 60.0, slide_pose)
+		y_lo = minf(y_lo, slide_pose.root_pos.y)
+		y_hi = maxf(y_hi, slide_pose.root_pos.y)
+	for i in 180:
+		slide.drag(slide_chest + Vector2(sin(i * 0.25) * 140.0, 0.0))
+		slide.tick(1.0 / 60.0, slide_pose)
+		y_lo = minf(y_lo, slide_pose.root_pos.y)
+		y_hi = maxf(y_hi, slide_pose.root_pos.y)
+	_check(y_hi - y_lo < 10.0, "horizontal drag stays stable")
+	slide.free()
 	controller.free()
 
 

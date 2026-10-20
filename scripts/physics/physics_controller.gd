@@ -17,7 +17,9 @@ var _last_delta: float = 1.0 / 60.0
 var _render_prev: PackedVector2Array = PackedVector2Array()
 var _grab_raw: Vector2 = Vector2.ZERO
 var _grab_smooth: Vector2 = Vector2.ZERO
+var _grab_relative: PackedVector2Array = PackedVector2Array()
 var grab_smoothing: float = 7.0
+var grab_stabilization: float = 0.20
 
 
 func setup(p_definition: RigDefinition) -> void:
@@ -53,6 +55,9 @@ func begin_drag(local: Vector2, floor: float, left: float, right: float) -> bool
 	_last_target = local
 	_grab_raw = local
 	_grab_smooth = local
+	_grab_relative.resize(solver.pos.size())
+	for i in solver.pos.size():
+		_grab_relative[i] = solver.pos[i] - point
 	_velocity = Vector2.ZERO
 	_last_delta = 1.0 / 60.0
 	grabbing = true
@@ -128,6 +133,12 @@ func tick(dt: float, pose: RigPose) -> void:
 			solver.sleeping = true
 	else:
 		_rest_steps = 0
+	if grabbing and _grab_relative.size() == solver.pos.size():
+		# 搬运稳定：向“抓点 + 初始相对位置”做少量刚性混合，
+		# 保留重力和碰撞，但抑制左右平移诱发的上下摆动。
+		for i in solver.pos.size():
+			solver.pos[i] = solver.pos[i].lerp(_grab_smooth + _grab_relative[i],
+					grab_stabilization)
 	solver.write_pose_interpolated(pose, _render_prev, _acc / H)
 	_render_prev = solver.pos.duplicate()
 
@@ -178,6 +189,6 @@ func _apply_tone(grab_bone: int) -> void:
 		if definition.bones[i].id == &"spine":
 			spine_bone = i
 			break
-	if spine_bone >= 0 and bone_id == &"spine":
-		# 抓腰时也不主动“扶正”，只保留被动重力/限位，避免绕抓点自转。
-		solver.world_bias[spine_bone] = 0.0
+	if spine_bone >= 0:
+		# 抓取时只给躯干很弱的世界空间支撑，配合切向阻尼抑制上下乱摆。
+		solver.world_bias[spine_bone] = 0.35
