@@ -131,15 +131,13 @@ func step(h: float) -> void:
 		_solve_distances()
 		_solve_grab()
 		_solve_collisions()
-	# 最后一次角度/碰撞可能轻微拉伸骨长，收尾再投影回距离约束。
-	for _i in 4:
-		_solve_distances()
-	# 抓取点最后再收一次，保证指针位置优先于骨长残差。
+	# 抓取/距离交替收尾：只做抓取会把关节钉住但拉长骨头，
+	# 只做距离又会让抓点漂移；交替几次同时收敛。
 	for _i in 8:
 		_solve_grab()
+		_solve_distances()
 	# 最后的距离/抓取可能再次把骨骼推过限位；下一子步会继续修正，
 	# 这里不再额外旋转，避免抓取时与鼠标目标形成来回拉扯。
-	_solve_distances()
 	# 所有约束结束后再做一次硬边界夹取，任何约束都不能把角色推出屏幕。
 	_solve_collisions()
 	_clamp_bounds()
@@ -195,14 +193,25 @@ func _solve_distances() -> void:
 		var dist := delta.length()
 		if dist < 0.0001:
 			continue
-		var wa := inv_mass[a]
-		var wc := inv_mass[c]
+		var wa := 0.0 if _is_grab_pinned(a) else inv_mass[a]
+		var wc := 0.0 if _is_grab_pinned(c) else inv_mass[c]
 		var wsum := wa + wc
 		if wsum <= 0.0:
 			continue
 		var corr := delta * ((dist - b.length) / dist)
 		pos[a] += corr * (wa / wsum)
 		pos[c] -= corr * (wc / wsum)
+
+
+func _is_grab_pinned(index: int) -> bool:
+	if grab_bone < 0:
+		return false
+	var b := def.bones[grab_bone]
+	if grab_t <= 0.02:
+		return index == b.start_idx
+	if grab_t >= 0.98:
+		return index == b.end_idx
+	return false
 
 
 func _solve_angles() -> void:
@@ -269,6 +278,13 @@ func _solve_grab() -> void:
 	target.x = clampf(target.x, wall_l, wall_r)
 	target.y = clampf(target.y, ceiling_y, floor_y)
 	var delta := (target - cur) * grab_strength
+	# 点在关节上时只钉住这个粒子，避免只移动单侧端点把骨头拉长。
+	if t <= 0.02:
+		pos[a] += delta
+		return
+	if t >= 0.98:
+		pos[c] += delta
+		return
 	var wa := inv_mass[a]
 	var wc := inv_mass[c]
 	var denom := (1.0 - t) * (1.0 - t) * wa + t * t * wc

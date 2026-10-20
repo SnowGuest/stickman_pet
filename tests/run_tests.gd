@@ -430,6 +430,25 @@ func _test_physics() -> void:
 		y_hi = maxf(y_hi, slide_pose.root_pos.y)
 	_check(y_hi - y_lo < 60.0, "horizontal drag remains physical")
 	slide.free()
+
+	for joint_name in [&"knee_l", &"elbow_l"]:
+		var joint_ctrl := PhysicsController.new()
+		joint_ctrl.setup(definition)
+		var joint_pose := definition.create_rest_pose()
+		joint_pose.root_pos = Vector2(500.0, 500.0)
+		RigState.resolve(definition, joint_pose)
+		var joint_point := definition.joint_pos(joint_pose, joint_name)
+		joint_ctrl.start_with_pose(joint_pose, joint_point, 900.0, 0.0, 1000.0)
+		for i in 120:
+			joint_ctrl.drag(joint_point + Vector2(sin(i * 0.25) * 160.0, 0.0))
+			joint_ctrl.tick(1.0 / 60.0, joint_pose)
+		var joint_error := 0.0
+		for b in definition.bones:
+			var length := joint_ctrl.solver.pos[b.start_idx].distance_to(
+					joint_ctrl.solver.pos[b.end_idx])
+			joint_error = maxf(joint_error, absf(length - b.length))
+		_check(joint_error < 1.0, "joint grab keeps bone length")
+		joint_ctrl.free()
 	controller.free()
 
 
