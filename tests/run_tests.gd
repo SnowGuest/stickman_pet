@@ -201,6 +201,7 @@ func _test_animation() -> void:
 	_check(library.get_clip(&"walk") != null, "walk clip")
 	_check(library.get_clip(&"drag_idle") != null, "drag_idle clip")
 	_check(library.get_clip(&"wave") != null, "wave performance clip")
+	_check(library.get_clip(&"cheer") != null, "cheer clip")
 
 	var all_finite := true
 	for clip_name in library.names():
@@ -298,6 +299,10 @@ func _test_brain() -> void:
 	brain.force(PetBrain.State.WAVE)
 	_check(brain.state == PetBrain.State.WAVE, "brain force state")
 	_check(brain.activity_name == "greet", "brain names wave activity")
+	brain.force(PetBrain.State.CHEER)
+	_check(brain.state == PetBrain.State.CHEER, "brain force cheer")
+	_check(brain.activity_name == "cheer", "brain names cheer activity")
+	brain.force(PetBrain.State.WAVE)
 	for i in 180:
 		brain.tick(1.0 / 60.0)
 	_check(brain.state == PetBrain.State.WAVE, "forced brain holds state")

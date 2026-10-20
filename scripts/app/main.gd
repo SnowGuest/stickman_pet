@@ -300,7 +300,7 @@ func _build_context_menu() -> void:
 	context_panel.add_child(box)
 
 	for action in [["自动行为", "auto"], ["Idle", "idle"], ["Walk", "walk"],
-			["Wave", "wave"], ["Look", "look"]]:
+			["Wave", "wave"], ["Cheer", "cheer"], ["Look", "look"]]:
 		_add_context_button(box, action[0], action[1])
 	box.add_child(HSeparator.new())
 	for palette_name in PALETTE_ORDER:
@@ -338,6 +338,9 @@ func _on_context_action(action: String) -> void:
 		"wave":
 			if brain != null:
 				brain.force(PetBrain.State.WAVE)
+		"cheer":
+			if brain != null:
+				brain.force(PetBrain.State.CHEER)
 		"look":
 			if brain != null:
 				brain.force(PetBrain.State.LOOK)
@@ -403,7 +406,7 @@ func _update_anim_highlight() -> void:
 func _on_brain_state_changed(next_state: int, _clip: StringName) -> void:
 	if audio == null:
 		return
-	if next_state == PetBrain.State.WAVE:
+	if next_state == PetBrain.State.WAVE or next_state == PetBrain.State.CHEER:
 		audio.play("sfx_wave_whoosh", -12.0)
 
 

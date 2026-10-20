@@ -1,19 +1,20 @@
 class_name PetBrain
 extends Node
 
-## 无鼠标交互的轻量自主行为调度器：只在待机/走路/挥手/观察之间切换。
+## 轻量自主行为调度器：待机/走路/挥手/欢呼/观察。
 ## 不做路径寻找和物理；角色始终留在桌面原位。
 
 signal state_changed(state: int, clip: StringName)
 signal footstep
 
-enum State { IDLE, WALK, WAVE, LOOK }
+enum State { IDLE, WALK, WAVE, LOOK, CHEER }
 
 const CLIP_BY_STATE := {
 	State.IDLE: &"idle",
 	State.WALK: &"walk",
 	State.WAVE: &"wave",
 	State.LOOK: &"idle",
+	State.CHEER: &"cheer",
 }
 
 var state: State = State.IDLE
@@ -51,13 +52,17 @@ const DURATION_RANGES := {
 	State.WALK: Vector2(3.5, 6.0),
 	State.WAVE: Vector2(2.6, 2.6),
 	State.LOOK: Vector2(2.5, 4.0),
+	State.CHEER: Vector2(2.2, 2.2),
 }
 
 const NEXT_WEIGHTS := {
-	State.IDLE: [[State.WALK, 0.45], [State.WAVE, 0.25], [State.LOOK, 0.30]],
-	State.WALK: [[State.IDLE, 0.65], [State.WAVE, 0.15], [State.LOOK, 0.20]],
-	State.WAVE: [[State.IDLE, 0.80], [State.WALK, 0.20]],
-	State.LOOK: [[State.IDLE, 0.70], [State.WALK, 0.30]],
+	State.IDLE: [[State.WALK, 0.40], [State.WAVE, 0.20], [State.LOOK, 0.25],
+			[State.CHEER, 0.15]],
+	State.WALK: [[State.IDLE, 0.55], [State.WAVE, 0.15], [State.LOOK, 0.20],
+			[State.CHEER, 0.10]],
+	State.WAVE: [[State.IDLE, 0.75], [State.WALK, 0.15], [State.CHEER, 0.10]],
+	State.LOOK: [[State.IDLE, 0.65], [State.WALK, 0.20], [State.CHEER, 0.15]],
+	State.CHEER: [[State.IDLE, 0.75], [State.WALK, 0.20], [State.WAVE, 0.05]],
 }
 
 
@@ -113,6 +118,7 @@ func _enter(next_state: State) -> void:
 		State.WALK: "patrol",
 		State.WAVE: "greet",
 		State.LOOK: "scan",
+		State.CHEER: "cheer",
 	}[next_state]
 	_recent_states.append(next_state)
 	if _recent_states.size() > 3:
@@ -139,6 +145,8 @@ func _pick_next() -> State:
 				weight *= (0.65 + boredom * 0.8) * (0.6 + energy)
 			State.WAVE:
 				weight *= (0.7 + curiosity * 0.5)
+			State.CHEER:
+				weight *= (0.6 + curiosity * 0.8) * (0.5 + energy)
 			State.LOOK:
 				weight *= (0.6 + curiosity)
 			State.IDLE:
