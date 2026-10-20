@@ -201,9 +201,6 @@ func _test_animation() -> void:
 	_check(library.get_clip(&"walk") != null, "walk clip")
 	_check(library.get_clip(&"drag_idle") != null, "drag_idle clip")
 	_check(library.get_clip(&"wave") != null, "wave performance clip")
-	_check(library.get_clip(&"panic_fall") != null, "panic fall clip")
-	_check(library.get_clip(&"land") != null, "land clip")
-	_check(library.get_clip(&"get_up") != null, "get up clip")
 
 	var all_finite := true
 	for clip_name in library.names():

@@ -1,9 +1,6 @@
 extends Node2D
 
 const PALETTE_ORDER := ["green", "orange", "blue", "red", "yellow"]
-const FALL_GRAVITY := 2300.0
-
-enum PostState { NONE, FALLING, LANDING, GETTING_UP }
 
 var shell: DesktopShell
 var single: SingleInstance
@@ -24,10 +21,6 @@ var context_menu: PopupMenu
 var palette_data: Dictionary = {}
 var palette_index: int = 1
 var _last_view_size: Vector2 = Vector2.ZERO
-var _standing_root_y: float = 0.0
-var _post_state: PostState = PostState.NONE
-var _post_time: float = 0.0
-var _fall_vy: float = 0.0
 
 
 func _ready() -> void:
@@ -39,7 +32,6 @@ func _ready() -> void:
 	var no_passthrough := args.has("--no-passthrough")
 	var screenshot_mode := args.has("--screenshot") or args.has("--pet-screenshot")
 	var grab_probe_mode := args.has("--pet-grab-probe")
-	var fall_demo_mode := args.has("--pet-fall-demo")
 	var anim_override := &""
 	var anim_time := 0.0
 	for arg in args:
@@ -138,8 +130,6 @@ func _ready() -> void:
 		grab_probe = GrabProbe.new()
 		add_child(grab_probe)
 		grab_probe.setup(shell, definition, pose, renderer, global_mouse)
-	if fall_demo_mode:
-		_trigger_fall_demo()
 
 	if screenshot_mode:
 		await get_tree().process_frame
@@ -242,96 +232,12 @@ func _process(dt: float) -> void:
 	if physics != null and physics.active:
 		physics.tick(dt, pose)
 		renderer.sync(pose)
-	elif _post_state != PostState.NONE:
-		_tick_post_grab(dt)
 	elif anim_player != null:
 		anim_player.tick(dt, pose)
 		RigState.resolve(definition, pose)
 		renderer.sync(pose)
 	if passthrough != null:
 		passthrough.tick(dt, definition, pose, renderer.get_view_scale())
-
-
-func _trigger_fall_demo() -> void:
-	if physics != null:
-		physics.stop()
-	_cancel_post_grab()
-	pose.root_pos.y = _standing_root_y - 480.0
-	_post_state = PostState.FALLING
-	_post_time = 0.0
-	_fall_vy = 0.0
-	anim_player.play(&"panic_fall", 0.0)
-	print("[post] fall demo")
-
-
-func _start_post_grab() -> void:
-	if physics == null or physics.solver == null:
-		return
-	var pelvis := int(definition.joint_index[&"pelvis"])
-	var root_y := physics.solver.pos[pelvis].y
-	var release_vy := physics.get_release_velocity().y
-	physics.stop()
-	_post_time = 0.0
-	_fall_vy = maxf(release_vy, 0.0)
-	if root_y < _standing_root_y - 40.0:
-		_post_state = PostState.FALLING
-		anim_player.play(&"panic_fall", 0.12)
-		print("[post] falling from ", root_y)
-	else:
-		_begin_landing()
-
-
-func _begin_landing() -> void:
-	_post_state = PostState.LANDING
-	_post_time = 0.0
-	pose.root_pos.y = _standing_root_y - 28.0
-	anim_player.play(&"land", 0.05)
-	print("[post] landing")
-
-
-func _begin_get_up() -> void:
-	_post_state = PostState.GETTING_UP
-	_post_time = 0.0
-	anim_player.play(&"get_up", 0.08)
-	print("[post] get up")
-
-
-func _finish_post_grab() -> void:
-	_post_state = PostState.NONE
-	_post_time = 0.0
-	pose.root_pos.y = _standing_root_y
-	anim_player.play(&"idle", 0.2)
-
-
-func _cancel_post_grab() -> void:
-	_post_state = PostState.NONE
-	_post_time = 0.0
-
-
-func _tick_post_grab(dt: float) -> void:
-	if anim_player == null or anim_player.current == null:
-		return
-	_post_time += dt
-	match _post_state:
-		PostState.FALLING:
-			_fall_vy += FALL_GRAVITY * dt
-			pose.root_pos.y += _fall_vy * dt
-			if pose.root_pos.y >= _standing_root_y - 28.0:
-				_begin_landing()
-		PostState.LANDING:
-			if _post_time >= anim_player.current.length:
-				_begin_get_up()
-		PostState.GETTING_UP:
-			var duration := maxf(anim_player.current.length, 0.001)
-			var t := clampf(_post_time / duration, 0.0, 1.0)
-			t = t * t * (3.0 - 2.0 * t)
-			pose.root_pos.y = lerpf(_standing_root_y - 28.0,
-					_standing_root_y, t)
-			if t >= 1.0:
-				_finish_post_grab()
-	anim_player.tick(dt, pose)
-	RigState.resolve(definition, pose)
-	renderer.sync(pose)
 
 
 func _apply_layout() -> void:
@@ -342,8 +248,6 @@ func _apply_layout() -> void:
 		return
 	shell.content_size = view_size
 	_place_pet()
-	if _post_state == PostState.NONE:
-		_standing_root_y = pose.root_pos.y
 	if physics != null and physics.active:
 		physics.set_bounds(shell.local_floor_y(), 0.0, view_size.x)
 		physics.solver.write_pose(pose)
@@ -371,7 +275,6 @@ func _on_palette_cycle() -> void:
 func _on_animation_selected(clip_name: StringName) -> void:
 	if physics != null:
 		physics.stop()
-	_cancel_post_grab()
 	if anim_player != null:
 		anim_player.play(clip_name, 0.2)
 		anim_player.apply(pose)
@@ -398,7 +301,6 @@ func _on_animation_time_seek(normalized: float) -> void:
 		return
 	if physics != null:
 		physics.stop()
-	_cancel_post_grab()
 	anim_player.seek(normalized)
 	RigState.resolve(definition, pose)
 	renderer.sync(pose)
@@ -428,7 +330,6 @@ func _build_context_menu() -> void:
 	context_menu.add_item("走路", 11)
 	context_menu.add_item("被抓", 12)
 	context_menu.add_item("挥手", 13)
-	context_menu.add_item("摔倒", 14)
 	context_menu.add_separator()
 	context_menu.add_item("退出", 9)
 
@@ -444,7 +345,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	var local := shell.global_to_local(DisplayServer.mouse_get_position())
 	if event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed and _is_over_pet(local):
-			_cancel_post_grab()
 			var view_size := get_viewport().get_visible_rect().size
 			if not physics.active:
 				var started := physics.start_with_pose(pose, local,
@@ -461,7 +361,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif not event.pressed and physics.grabbing:
 			physics.end_drag()
 			passthrough.unlock()
-			_start_post_grab()
 			get_viewport().set_input_as_handled()
 			print("[physics] release")
 		return
@@ -507,8 +406,6 @@ func _on_context_menu_id(id: int) -> void:
 			_on_animation_selected(&"drag_idle")
 		13:
 			_on_animation_selected(&"wave")
-		14:
-			_trigger_fall_demo()
 		9:
 			get_tree().quit()
 
