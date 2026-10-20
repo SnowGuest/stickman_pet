@@ -24,7 +24,7 @@ var grab_angular_damping: float = 0.50
 var grab_vertical_damping: float = 1.0
 
 var gravity: float = 2300.0
-var damping: float = 0.998
+var damping: float = 1.0
 var grab_damping: float = 0.985
 var max_speed: float = 6000.0
 var iterations: int = 8
@@ -36,6 +36,7 @@ var wall_r: float = 1918.0
 var restitution: float = 0.0
 var friction: float = 0.72
 var contact_damping: float = 0.35
+var supported_damping: float = 0.15
 var root_angle: float = 0.0
 var view_scale: float = 1.0
 var sleeping: bool = false
@@ -145,7 +146,7 @@ func start_from_pose(pose: RigPose, floor: float, left: float, right: float) -> 
 	floor_y = floor
 	wall_l = left
 	wall_r = right
-	damping = 0.998
+	damping = 1.0
 	sync_from_pose(pose)
 	for i in def.bones.size():
 		drive_rel[i] = pose.rel[i]
@@ -205,7 +206,7 @@ func step(h: float) -> void:
 	# 约束求解会注入额外速度；松手状态下每步再耗散一部分，避免“果冻/皮球”感。
 	if grab_bone < 0:
 		var supported := is_supported()
-		var keep := 0.40 if supported else 0.95
+		var keep := supported_damping if supported else 1.0
 		for p in pos.size():
 			var velocity := (pos[p] - prev[p]) * keep
 			prev[p] = pos[p] - velocity
@@ -456,7 +457,7 @@ func begin_grab(bone: int, t: float, point: Vector2,
 
 func end_grab() -> void:
 	grab_bone = -1
-	damping = 0.998
+	damping = 1.0
 
 
 func damp_velocities(factor: float) -> void:

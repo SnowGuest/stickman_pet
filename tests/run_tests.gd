@@ -331,7 +331,7 @@ func _test_physics() -> void:
 		fall.step(1.0 / 120.0)
 	var speed_b := fall.pos[fall_pelvis].distance_to(
 			fall.prev[fall_pelvis]) * 120.0
-	_check(speed_b > speed_a * 1.2, "gravity keeps accelerating")
+	_check(speed_b > speed_a * 1.8, "gravity keeps accelerating")
 	var bounded := true
 	for i in solver.pos.size():
 		var r := solver.radius[i]
