@@ -319,7 +319,7 @@ func _test_brain() -> void:
 	for i in 36000:
 		brain.tick(1.0 / 60.0)
 		seen[brain.state] = true
-	_check(seen.size() >= 3, "brain visits multiple states over 10 minutes")
+	_check(seen.size() >= 4, "brain visits all four activities over 10 minutes")
 	brain.free()
 	player.free()
 
