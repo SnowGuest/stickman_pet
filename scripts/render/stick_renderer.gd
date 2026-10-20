@@ -92,6 +92,8 @@ func _build_back_path(p: RigPose) -> PackedVector2Array:
 	_append(points, p, &"pelvis")
 	_append(points, p, &"knee_l")
 	_append(points, p, &"ankle_l")
+	_append_mirrored_toe(points, p, &"ankle_l", &"toe_l")
+	_append(points, p, &"ankle_l")
 	return PackedVector2Array(points)
 
 
@@ -127,9 +129,13 @@ func _build_path(p: RigPose) -> PackedVector2Array:
 	_append(points, p, &"pelvis")
 	_append(points, p, &"knee_l")
 	_append(points, p, &"ankle_l")
+	_append_mirrored_toe(points, p, &"ankle_l", &"toe_l")
+	_append(points, p, &"ankle_l")
 	_append(points, p, &"knee_l")
 	_append(points, p, &"pelvis")
 	_append(points, p, &"knee_r")
+	_append(points, p, &"ankle_r")
+	_append(points, p, &"toe_r")
 	_append(points, p, &"ankle_r")
 	_append(points, p, &"knee_r")
 	_append(points, p, &"pelvis")
@@ -143,6 +149,17 @@ func _append(points: Array[Vector2], p: RigPose, joint: StringName) -> void:
 	var index := int(definition.joint_index.get(joint, -1))
 	if index >= 0:
 		points.append(p.joint_pos[index] - p.root_pos)
+
+
+func _append_mirrored_toe(points: Array[Vector2], p: RigPose,
+		ankle_id: StringName, toe_id: StringName) -> void:
+	var ankle_index := int(definition.joint_index.get(ankle_id, -1))
+	var toe_index := int(definition.joint_index.get(toe_id, -1))
+	if ankle_index < 0 or toe_index < 0:
+		return
+	var ankle := p.joint_pos[ankle_index]
+	var toe := p.joint_pos[toe_index]
+	points.append(Vector2(ankle.x * 2.0 - toe.x, toe.y) - p.root_pos)
 
 
 func set_view_scale(value: float) -> void:
