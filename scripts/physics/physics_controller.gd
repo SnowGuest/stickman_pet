@@ -146,6 +146,9 @@ func tick(dt: float, pose: RigPose) -> void:
 		guard += 1
 	if grabbing:
 		_rest_steps = 0
+		# 手臂是二级摆动链，抓颈/肩时末端容易放大抖动；单独阻尼上肢。
+		solver.damp_bone_motion([&"upper_arm_l", &"upper_arm_r",
+				&"forearm_l", &"forearm_r"], 0.82)
 	elif solver.is_supported() and solver.is_resting():
 		_rest_steps += 1
 		if _rest_steps >= 120:
@@ -160,6 +163,21 @@ func tick(dt: float, pose: RigPose) -> void:
 					grab_stabilization)
 	solver.write_pose_interpolated(pose, _render_prev, _acc / H)
 	_render_prev = solver.pos.duplicate()
+
+
+func _hold_relative_angle(bone_id: StringName, strength: float) -> void:
+	for i in definition.bones.size():
+		var b := definition.bones[i]
+		if b.id != bone_id or b.parent_index < 0:
+			continue
+		var pb := definition.bones[b.parent_index]
+		var child_dir := solver.pos[b.end_idx] - solver.pos[b.start_idx]
+		var parent_dir := solver.pos[pb.end_idx] - solver.pos[pb.start_idx]
+		if child_dir.length_squared() < 1e-6 or parent_dir.length_squared() < 1e-6:
+			continue
+		solver.drive_rel[i] = wrapf(child_dir.angle() - parent_dir.angle(),
+				-PI, PI)
+		solver.tone[i] = strength
 
 
 func _apply_tone(grab_bone: int) -> void:
@@ -203,6 +221,18 @@ func _apply_tone(grab_bone: int) -> void:
 	for i in definition.bones.size():
 		solver.tone[i] = 0.0
 		solver.world_bias[i] = 0.0
+	var hold_id := &""
+	match definition.bones[grab_bone].id:
+		&"forearm_l", &"upper_arm_l":
+			hold_id = &"forearm_l"
+		&"forearm_r", &"upper_arm_r":
+			hold_id = &"forearm_r"
+		&"thigh_l", &"shin_l":
+			hold_id = &"shin_l"
+		&"thigh_r", &"shin_r":
+			hold_id = &"shin_r"
+	if hold_id != &"":
+		_hold_relative_angle(hold_id, 1.0)
 	var spine_bone := -1
 	for i in definition.bones.size():
 		if definition.bones[i].id == &"spine":

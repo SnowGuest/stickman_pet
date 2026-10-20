@@ -431,7 +431,7 @@ func pick(point: Vector2) -> Array:
 
 	var best := [-1, 0.0, INF, Vector2.ZERO]
 	var best_priority := -1
-	var priority_slack := 14.0 * view_scale
+	var priority_slack := 30.0 * view_scale
 	for i in def.bones.size():
 		var b := def.bones[i]
 		var a := pos[b.start_idx]
@@ -488,6 +488,19 @@ func damp_velocities(factor: float) -> void:
 	for p in pos.size():
 		var velocity := (pos[p] - prev[p]) * factor
 		prev[p] = pos[p] - velocity
+
+
+func damp_bone_motion(bone_ids: Array, factor: float) -> void:
+	var seen := {}
+	for b in def.bones:
+		if not (b.id in bone_ids):
+			continue
+		for idx in [b.start_idx, b.end_idx]:
+			if seen.has(idx):
+				continue
+			seen[idx] = true
+			var velocity := (pos[idx] - prev[idx]) * factor
+			prev[idx] = pos[idx] - velocity
 
 
 func apply_velocity(bone: int, t: float, velocity: Vector2, h: float) -> void:
