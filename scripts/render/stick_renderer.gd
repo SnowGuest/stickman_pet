@@ -128,8 +128,13 @@ func _sync_sdf(p: RigPose) -> void:
 	for b in definition.bones:
 		if b.id in [&"upper_arm_l", &"forearm_l", &"upper_arm_r", &"forearm_r"]:
 			continue
-		var start := _joint_screen(p, b.start_idx)
-		var end := _joint_screen(p, b.end_idx)
+		var leg_offset := Vector2.ZERO
+		if str(b.id).begins_with("thigh") or str(b.id).begins_with("shin") \
+				or str(b.id).begins_with("foot"):
+			leg_offset.x = (-4.0 if str(b.id).ends_with("_l") else 4.0) \
+					* _view_scale
+		var start := _joint_screen(p, b.start_idx) + leg_offset
+		var end := _joint_screen(p, b.end_idx) + leg_offset
 		if b.id == &"foot_l" or b.id == &"foot_r":
 			end = start + (end - start) * 0.6
 		segments.append(Vector4(start.x, start.y, end.x, end.y))
