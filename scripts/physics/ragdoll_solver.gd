@@ -20,7 +20,7 @@ var grab_t: float = 0.5
 var grab_local_offset: Vector2 = Vector2.ZERO
 var grab_target: Vector2 = Vector2.ZERO
 var grab_strength: float = 0.38
-var grab_angular_damping: float = 0.50
+var grab_angular_damping: float = 0.35
 var grab_vertical_damping: float = 1.0
 
 var gravity: float = 2300.0
@@ -28,7 +28,7 @@ var damping: float = 1.0
 var grab_damping: float = 0.985
 var max_speed: float = 6000.0
 var iterations: int = 8
-var max_corr: float = 0.20
+var max_corr: float = 0.12
 var floor_y: float = 1000.0
 var ceiling_y: float = 0.0
 var wall_l: float = 2.0
