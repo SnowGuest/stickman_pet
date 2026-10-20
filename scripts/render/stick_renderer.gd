@@ -108,6 +108,15 @@ func _effective_head_radius() -> float:
 	return definition.head_radius * (1.0 if head_hollow else 0.75)
 
 
+func _head_center_local(p: RigPose) -> Vector2:
+	var neck := p.joint_pos[int(definition.joint_index[&"neck_top"])]
+	var chest := p.joint_pos[int(definition.joint_index[&"chest"])]
+	var dir := (neck - chest).normalized()
+	if dir.length_squared() < 0.0001:
+		dir = Vector2(0.0, -1.0)
+	return neck + dir * _effective_head_radius()
+
+
 func _has_l_feet() -> bool:
 	return not head_hollow
 
@@ -126,9 +135,7 @@ func sync(p_pose: RigPose) -> void:
 		_layer_front.points = _build_front_path(pose)
 	else:
 		_stroke.points = _build_path(pose)
-	var neck := pose.joint_pos[int(definition.joint_index[&"neck_top"])]
-	_head.position = neck - pose.root_pos + Vector2(0.0,
-			-_effective_head_radius())
+	_head.position = _head_center_local(pose) - pose.root_pos
 
 
 func _sync_sdf(p: RigPose) -> void:
@@ -149,9 +156,7 @@ func _sync_sdf(p: RigPose) -> void:
 	_append_arm_curve(segments, p, &"upper_arm_r", &"forearm_r")
 	_append_leg_curve(segments, p, &"thigh_l", &"shin_l")
 	_append_leg_curve(segments, p, &"thigh_r", &"shin_r")
-	var neck := _joint_screen(p, definition.joint_index[&"neck_top"])
-	var head_center := neck + Vector2(0.0, -_effective_head_radius() *
-			_view_scale)
+	var head_center := to_global(_head_center_local(p) - p.root_pos)
 	_sdf_material.set_shader_parameter("screen_size", view_size)
 	for i in segments.size():
 		_sdf_material.set_shader_parameter("seg%d" % i, segments[i])

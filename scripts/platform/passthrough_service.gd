@@ -81,9 +81,16 @@ func build_region(definition: RigDefinition, pose: RigPose,
 			points.append(a + offset)
 			points.append(b + offset)
 	var neck_index := int(definition.joint_index.get(&"neck_top", -1))
+	var chest_index := int(definition.joint_index.get(&"chest", -1))
 	if neck_index >= 0:
 		var neck := _visual_joint(pose, neck_index, render_scale)
-		var head := neck + Vector2(0.0, -definition.head_radius * render_scale)
+		var dir := Vector2(0.0, -1.0)
+		if chest_index >= 0:
+			dir = (neck - _visual_joint(pose, chest_index,
+					render_scale)).normalized()
+			if dir.length_squared() < 0.0001:
+				dir = Vector2(0.0, -1.0)
+		var head := neck + dir * definition.head_radius * render_scale
 		var head_radius := (definition.head_radius + 3.0) * render_scale
 		for k in 16:
 			points.append(head + Vector2.from_angle(TAU * k / 16.0)
