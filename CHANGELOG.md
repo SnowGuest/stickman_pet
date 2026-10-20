@@ -76,7 +76,8 @@
 
 ### Removed
 
-- 移除 `GlobalMouse`/全局按键轮询与 `GrabProbe` 外部按住交互；只保留角色上的鼠标按住拖动
+- 移除全部鼠标交互：抓取、拖动、投掷、右键菜单、FloatPanel、GrabProbe、GlobalMouse 全局轮询
+- 角色只播放待机/走路/挥手动画，不再响应鼠标
 - C# 托盘 helper 不再写 `stickman_mouse.txt`
 
 ### Changed

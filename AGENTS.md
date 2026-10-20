@@ -77,8 +77,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full -Releas
 | 启动耗时验收 | `powershell -ExecutionPolicy Bypass -File tools\test_startup.ps1` |
 | Alt+Tab 隐藏验收 | `powershell -ExecutionPolicy Bypass -File tools\test_alt_tab.ps1` |
 | 退出清理验收 | `powershell -ExecutionPolicy Bypass -File tools\test_exit.ps1` |
-| 抓取点误差验收 | `powershell -ExecutionPolicy Bypass -File tools\test_grab_point.ps1` |
-| 右键菜单验收 | `powershell -ExecutionPolicy Bypass -File tools\test_context_menu.ps1` |
 | 安装 Git 钩子 | `powershell -ExecutionPolicy Bypass -File tools\install_hooks.ps1` |
 | 导入资源 | `Godot.exe --headless --path . --import` |
 
@@ -121,7 +119,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full -Releas
 | CI | GitHub Actions 已跑通（2026-10-19，用户确认） |
 | 字体 | Noto Sans SC 可变字体，17.7MB，OFL，已接入全局 Theme |
 | 原生工具链 | .NET Framework `csc.exe` 可用；无 C++/Rust/CMake |
-| 当前阶段 | P3 物理（35%）：PBD/抓取；松手保持纯物理坠落，表演序列暂缓 |
+| 当前阶段 | P2 动画（90%）：无鼠标交互；固定待机/走路/挥手动画 |
 
 环境事实变化时更新本表，不要在新会话里假设旧状态。
 

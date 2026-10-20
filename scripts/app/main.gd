@@ -10,12 +10,8 @@ var renderer: StickRenderer
 var passthrough: PassthroughService
 var debug: DebugOverlay
 var tray: TrayService
-var grab_probe: GrabProbe
-var panel: FloatPanel
 var anim_library: AnimLibrary
 var anim_player: AnimPlayer
-var physics: PhysicsController
-var context_menu: PopupMenu
 
 var palette_data: Dictionary = {}
 var palette_index: int = 1
@@ -30,7 +26,6 @@ func _ready() -> void:
 	var safe_mode := args.has("--safe")
 	var no_passthrough := args.has("--no-passthrough")
 	var screenshot_mode := args.has("--screenshot") or args.has("--pet-screenshot")
-	var grab_probe_mode := args.has("--pet-grab-probe")
 	var anim_override := &""
 	var anim_time := 0.0
 	for arg in args:
@@ -74,10 +69,6 @@ func _ready() -> void:
 	if anim_time > 0.0 and anim_player.current != null:
 		anim_player.seek(anim_time / anim_player.current.length)
 
-	physics = PhysicsController.new()
-	add_child(physics)
-	physics.setup(definition, renderer.get_view_scale())
-	physics.verbose = debug_mode
 	anim_player.event_fired.connect(func(event_name: String) -> void:
 		print("[anim] event=", event_name))
 
@@ -98,35 +89,10 @@ func _ready() -> void:
 	anim_player.clip_changed.connect(_on_anim_clip_changed)
 	_update_anim_highlight()
 
-	panel = FloatPanel.new()
-	add_child(panel)
-	var anim_names := anim_library.names()
-	var anim_index := maxi(0, anim_names.find(&"idle"))
-	panel.setup(renderer.get_stroke_width(), PALETTE_ORDER, palette_index,
-			anim_names, anim_index)
-	panel.visible = debug_mode
-	panel.line_width_changed.connect(_on_line_width_changed)
-	panel.palette_selected.connect(_set_palette_by_name)
-	panel.animation_selected.connect(_on_animation_selected)
-	panel.animation_time_seek.connect(_on_animation_time_seek)
-	panel.skeleton_toggled.connect(func(enabled: bool) -> void:
-		debug.show_skeleton = enabled)
-
-	context_menu = PopupMenu.new()
-	add_child(context_menu)
-	_build_context_menu()
-	context_menu.id_pressed.connect(_on_context_menu_id)
-	context_menu.popup_hide.connect(_on_context_menu_hidden)
-
 	tray = TrayService.new()
 	add_child(tray)
 	if not screenshot_mode and tray.setup():
 		tray.command_received.connect(_on_tray_command)
-
-	if grab_probe_mode:
-		grab_probe = GrabProbe.new()
-		add_child(grab_probe)
-		grab_probe.setup(shell, definition, pose, renderer)
 
 	if screenshot_mode:
 		await get_tree().process_frame
@@ -226,12 +192,7 @@ func _process(dt: float) -> void:
 		_last_view_size = view_size
 		_apply_layout()
 	shell.poll(dt)
-	if physics != null and physics.grabbing:
-		physics.drag(get_viewport().get_mouse_position())
-	if physics != null and physics.active:
-		physics.tick(dt, pose)
-		renderer.sync(pose)
-	elif anim_player != null:
+	if anim_player != null:
 		anim_player.tick(dt, pose)
 		RigState.resolve(definition, pose)
 		renderer.sync(pose)
@@ -247,15 +208,10 @@ func _apply_layout() -> void:
 		return
 	shell.content_size = view_size
 	_place_pet()
-	if physics != null and physics.active:
-		physics.set_bounds(shell.local_floor_y(), 0.0, view_size.x)
-		physics.solver.write_pose(pose)
-	elif anim_player != null:
+	if anim_player != null:
 		anim_player.apply(pose)
 	RigState.resolve(definition, pose)
 	renderer.sync(pose)
-	if grab_probe != null:
-		grab_probe.refresh_target()
 	if passthrough != null:
 		passthrough.unlock()
 		passthrough.tick(0.0, definition, pose, renderer.get_view_scale())
@@ -272,16 +228,12 @@ func _on_palette_cycle() -> void:
 
 
 func _on_animation_selected(clip_name: StringName) -> void:
-	if physics != null:
-		physics.stop()
 	if anim_player != null:
 		anim_player.play(clip_name, 0.2)
 		anim_player.apply(pose)
 		RigState.resolve(definition, pose)
 		renderer.sync(pose)
 		print("[anim] clip=", clip_name)
-		if panel != null:
-			panel.set_animation_selected(clip_name)
 		_update_anim_highlight()
 
 
@@ -295,18 +247,6 @@ func _update_anim_highlight() -> void:
 	debug.highlight_bones = anim_player.current.tracks.duplicate()
 
 
-func _on_animation_time_seek(normalized: float) -> void:
-	if anim_player == null:
-		return
-	if physics != null:
-		physics.stop()
-	anim_player.seek(normalized)
-	RigState.resolve(definition, pose)
-	renderer.sync(pose)
-	if passthrough != null:
-		passthrough.unlock()
-
-
 func _set_palette_by_name(palette_name: String) -> void:
 	var index := PALETTE_ORDER.find(palette_name)
 	if index < 0:
@@ -314,100 +254,6 @@ func _set_palette_by_name(palette_name: String) -> void:
 	palette_index = index
 	renderer.set_palette(palette_data, palette_name)
 	print("[debug] palette=", palette_name)
-
-
-func _on_line_width_changed(value: float) -> void:
-	renderer.set_line_width(value)
-	print("[debug] line_width=", value)
-
-
-func _build_context_menu() -> void:
-	context_menu.add_item("显示/隐藏", 1)
-	context_menu.add_item("静音", 2)
-	context_menu.add_separator()
-	context_menu.add_item("待机", 10)
-	context_menu.add_item("走路", 11)
-	context_menu.add_item("被抓", 12)
-	context_menu.add_item("挥手", 13)
-	context_menu.add_separator()
-	context_menu.add_item("退出", 9)
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventMouseButton):
-		return
-	var local: Vector2 = event.position
-	if event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed and _is_over_pet(local):
-			var view_size := get_viewport().get_visible_rect().size
-			if not physics.active:
-				var started := physics.start_with_pose(pose, local,
-						shell.local_floor_y(), 0.0, view_size.x)
-				if not started:
-					physics.stop()
-					return
-			elif not physics.begin_drag(local, shell.local_floor_y(),
-					0.0, view_size.x):
-				return
-			passthrough.lock_full(shell.content_size)
-			get_viewport().set_input_as_handled()
-			print("[physics] grab local=", local)
-		elif not event.pressed and physics.grabbing:
-			_finish_grab()
-			get_viewport().set_input_as_handled()
-			print("[physics] release")
-		return
-	if event.button_index != MOUSE_BUTTON_RIGHT or not event.pressed:
-		return
-	if not _is_over_pet(local):
-		return
-	get_viewport().set_input_as_handled()
-	_open_context_menu(local)
-
-
-func _finish_grab() -> void:
-	if physics == null or not physics.grabbing:
-		return
-	physics.end_drag()
-	passthrough.unlock()
-
-
-func _open_context_menu(local: Vector2) -> void:
-	passthrough.lock_full(shell.content_size)
-	context_menu.popup(Rect2i(Vector2i(local), Vector2i(220, 0)))
-	var marker := FileAccess.open("user://context_menu_open.txt", FileAccess.WRITE)
-	if marker != null:
-		marker.store_string(str(local))
-		marker.close()
-	print("[menu] open local=", local)
-
-
-func _is_over_pet(local: Vector2) -> bool:
-	var region := passthrough.build_region(definition, pose,
-			renderer.get_view_scale())
-	return region.size() >= 3 and Geometry2D.is_point_in_polygon(local, region)
-
-
-func _on_context_menu_hidden() -> void:
-	passthrough.unlock()
-
-
-func _on_context_menu_id(id: int) -> void:
-	match id:
-		1:
-			_on_tray_command("toggle")
-		2:
-			_on_tray_command("mute")
-		10:
-			_on_animation_selected(&"idle")
-		11:
-			_on_animation_selected(&"walk")
-		12:
-			_on_animation_selected(&"drag_idle")
-		13:
-			_on_animation_selected(&"wave")
-		9:
-			get_tree().quit()
 
 
 func _on_tray_command(command: String) -> void:
