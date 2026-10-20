@@ -23,6 +23,13 @@ var energy: float = 0.85
 var boredom: float = 0.15
 var curiosity: float = 0.60
 
+
+func body_bob() -> float:
+	# 走路时轻微上下起伏；不改变骨骼长度和接触阴影。
+	if state != State.WALK:
+		return 0.0
+	return -absf(sin(state_time * 8.0)) * 1.6
+
 var _anim: AnimPlayer
 var _rng := RandomNumberGenerator.new()
 var _duration: float = 8.0

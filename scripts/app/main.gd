@@ -19,6 +19,7 @@ var audio: AudioService
 var palette_data: Dictionary = {}
 var palette_index: int = 1
 var _last_view_size: Vector2 = Vector2.ZERO
+var _base_root_y: float = 0.0
 
 
 func _ready() -> void:
@@ -216,6 +217,8 @@ func _process(dt: float) -> void:
 			brain.tick(dt)
 		anim_player.tick(dt, pose)
 		_apply_brain_look()
+		if brain != null:
+			pose.root_pos.y = _base_root_y + brain.body_bob()
 		RigState.resolve(definition, pose)
 		renderer.sync(pose)
 		if shadow != null:
@@ -232,6 +235,7 @@ func _apply_layout() -> void:
 		return
 	shell.content_size = view_size
 	_place_pet()
+	_base_root_y = pose.root_pos.y
 	if anim_player != null:
 		anim_player.apply(pose)
 	_apply_brain_look()

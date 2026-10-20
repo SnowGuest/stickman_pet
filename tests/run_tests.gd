@@ -299,6 +299,10 @@ func _test_brain() -> void:
 	for i in 30:
 		brain.tick(1.0 / 60.0)
 	_check(absf(brain.look_angle) > 0.05, "look state adds head turn")
+	brain.force(PetBrain.State.WALK)
+	for i in 10:
+		brain.tick(1.0 / 60.0)
+	_check(brain.body_bob() <= 0.0, "walk adds body bob")
 	brain.free()
 	player.free()
 
