@@ -10,7 +10,8 @@
 - P4 自主行为首版：`PetBrain` 四状态 Idle/Walk/Wave/Look，按权重与最短停留自动切换
 - P2 交叉淡化：0.2s idle→walk 连续性自动测试通过
 - P4 自主细节：energy/boredom/curiosity、Look 头部偏转、脚步/挥手音效
-- P5 接触阴影 + 走路起伏/整体轻摆（单笔不拆层）
+- P5 接触阴影 + 走路起伏/整体轻摆
+- 默认 SDF 笔画：13 骨胶囊并集 + 空心头圆环，`--line` 回退单笔 Line2D
 - 2D/3D 火柴人加回 L 形双脚：左脚向外、右脚向外，脚长从 10 缩短到 3
 - P6 绿色版：`tools/package_release.ps1` 生成 zip + SHA256；30s soak
 - 版本迭代目录：v0.1.0–v1.0.0 的迭代说明与更新记录
@@ -27,7 +28,7 @@
 - 7 个 OGG 音效入库（脚步/落地/挥动/坐下/挥手/鼓掌/弹出）
 - 挥手 whoosh 重命名为 `sfx_wave_whoosh.ogg`，抛出音效待补
 - `sfx_wave.ogg` 设为循环，用作连续挥手
-- P0 工程基线测试 155 项，替换占位测试入口
+- P0 工程基线测试 157 项，替换占位测试入口
 - `gate -Full` 增加主场景启动冒烟
 - 真实 Windows exe 导出成功（首版 117.92MB，P1 版 117.96MB），exe 冒烟退出 0
 - GitHub Actions 跑通，P0 工程基线 100% 完成

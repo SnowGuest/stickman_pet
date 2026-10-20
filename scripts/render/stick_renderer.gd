@@ -10,8 +10,12 @@ var _stroke: Line2D
 var _layer_back: Line2D
 var _layer_front: Line2D
 var _head: StickHead
+var _sdf_layer: CanvasLayer
+var _sdf_rect: ColorRect
+var _sdf_material: ShaderMaterial
 var _view_scale: float = 1.25
 var _layered: bool = false
+var _sdf: bool = false
 
 
 func setup(p_definition: RigDefinition, palette: Dictionary, palette_name: String,
@@ -26,6 +30,18 @@ func setup(p_definition: RigDefinition, palette: Dictionary, palette_name: Strin
 	_head.name = "HeadCircle"
 	_head.z_index = 20
 	add_child(_head)
+	_sdf_layer = CanvasLayer.new()
+	_sdf_layer.name = "SdfLayer"
+	add_child(_sdf_layer)
+	_sdf_rect = ColorRect.new()
+	_sdf_rect.name = "SdfStroke"
+	_sdf_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sdf_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_sdf_material = ShaderMaterial.new()
+	_sdf_material.shader = load("res://scripts/render/sdf_stroke.gdshader")
+	_sdf_rect.material = _sdf_material
+	_sdf_rect.visible = false
+	_sdf_layer.add_child(_sdf_rect)
 	set_palette(palette, palette_name)
 
 
@@ -55,6 +71,22 @@ func is_layered() -> bool:
 	return _layered
 
 
+func set_sdf(enabled: bool) -> void:
+	_sdf = enabled
+	if _sdf_rect != null:
+		_sdf_rect.visible = enabled
+	_stroke.visible = not enabled
+	_layer_back.visible = not enabled and _layered
+	_layer_front.visible = not enabled and _layered
+	_head.visible = not enabled
+	if pose != null:
+		sync(pose)
+
+
+func is_sdf() -> bool:
+	return _sdf
+
+
 func set_palette(palette: Dictionary, palette_name: String) -> void:
 	var entries: Dictionary = palette.get("palettes", {})
 	if not entries.has(palette_name):
@@ -67,6 +99,9 @@ func set_palette(palette: Dictionary, palette_name: String) -> void:
 	_layer_front.default_color = palette_color
 	_head.configure(definition.head_radius, palette_color, head_hollow,
 			definition.head_line_width)
+	if _sdf_material != null:
+		_sdf_material.set_shader_parameter("stroke_color", palette_color)
+		_sdf_material.set_shader_parameter("head_hollow", head_hollow)
 
 
 func sync(p_pose: RigPose) -> void:
@@ -74,6 +109,9 @@ func sync(p_pose: RigPose) -> void:
 		return
 	pose = p_pose
 	position = pose.root_pos
+	if _sdf:
+		_sync_sdf(pose)
+		return
 	if _layered:
 		_layer_back.points = _build_back_path(pose)
 		_stroke.points = _build_body_path(pose)
@@ -82,6 +120,44 @@ func sync(p_pose: RigPose) -> void:
 		_stroke.points = _build_path(pose)
 	var neck := pose.joint_pos[int(definition.joint_index[&"neck_top"])]
 	_head.position = neck - pose.root_pos + Vector2(0.0, -definition.head_radius)
+
+
+func _sync_sdf(p: RigPose) -> void:
+	var view_size := get_viewport().get_visible_rect().size
+	var segments := PackedVector4Array()
+	for b in definition.bones:
+		var start := to_global(p.joint_pos[b.start_idx] - p.root_pos)
+		var end := to_global(p.joint_pos[b.end_idx] - p.root_pos)
+		if b.id == &"foot_l" or b.id == &"foot_r":
+			end = start + (end - start) * 0.6
+			if b.id == &"foot_l":
+				end.x = start.x * 2.0 - end.x
+		segments.append(Vector4(start.x, start.y, end.x, end.y))
+	var neck := to_global(p.joint_pos[definition.joint_index[&"neck_top"]] -
+			p.root_pos)
+	var head_center := neck + Vector2(0.0, -definition.head_radius *
+			_view_scale)
+	_sdf_material.set_shader_parameter("screen_size", view_size)
+	_sdf_material.set_shader_parameter("seg0", segments[0])
+	_sdf_material.set_shader_parameter("seg1", segments[1])
+	_sdf_material.set_shader_parameter("seg2", segments[2])
+	_sdf_material.set_shader_parameter("seg3", segments[3])
+	_sdf_material.set_shader_parameter("seg4", segments[4])
+	_sdf_material.set_shader_parameter("seg5", segments[5])
+	_sdf_material.set_shader_parameter("seg6", segments[6])
+	_sdf_material.set_shader_parameter("seg7", segments[7])
+	_sdf_material.set_shader_parameter("seg8", segments[8])
+	_sdf_material.set_shader_parameter("seg9", segments[9])
+	_sdf_material.set_shader_parameter("seg10", segments[10])
+	_sdf_material.set_shader_parameter("seg11", segments[11])
+	_sdf_material.set_shader_parameter("seg12", segments[12])
+	_sdf_material.set_shader_parameter("line_radius",
+			definition.line_width * _view_scale * 0.5)
+	_sdf_material.set_shader_parameter("head_center", head_center)
+	_sdf_material.set_shader_parameter("head_radius",
+			definition.head_radius * _view_scale)
+	_sdf_material.set_shader_parameter("head_half_width",
+			definition.head_line_width * _view_scale * 0.5)
 
 
 func _build_back_path(p: RigPose) -> PackedVector2Array:

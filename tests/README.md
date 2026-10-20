@@ -27,5 +27,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full
 - GDScript 警告等级：untyped / unsafe_* / return_value_discarded 为 warn；
 - P1：Rig 编译、FK 坐标、凸包区域、单笔路径/无描边、橙色空心头。
 
-当前：**155 项检查**，失败时退出码 1。
+当前：**157 项检查**，失败时退出码 1。
 `gate -Full` 还会执行主场景启动冒烟：`--headless --quit-after 2`。
