@@ -315,6 +315,23 @@ func _test_physics() -> void:
 		if not is_finite(p.x) or not is_finite(p.y):
 			finite = false
 	_check(finite, "PBD finite positions")
+
+	var fall := RagdollSolver.new()
+	fall.build(definition)
+	var fall_pose := definition.create_rest_pose()
+	fall_pose.root_pos = Vector2(500.0, 250.0)
+	RigState.resolve(definition, fall_pose)
+	fall.start_from_pose(fall_pose, 1200.0, 0.0, 1000.0)
+	var fall_pelvis := int(definition.joint_index[&"pelvis"])
+	for i in 20:
+		fall.step(1.0 / 120.0)
+	var speed_a := fall.pos[fall_pelvis].distance_to(
+			fall.prev[fall_pelvis]) * 120.0
+	for i in 20:
+		fall.step(1.0 / 120.0)
+	var speed_b := fall.pos[fall_pelvis].distance_to(
+			fall.prev[fall_pelvis]) * 120.0
+	_check(speed_b > speed_a * 1.2, "gravity keeps accelerating")
 	var bounded := true
 	for i in solver.pos.size():
 		var r := solver.radius[i]
@@ -338,8 +355,9 @@ func _test_physics() -> void:
 		var lo := solver.limit_lo[i]
 		var hi := solver.limit_hi[i]
 		if hi - lo <= PI * 1.5:
-			max_violation = maxf(max_violation,
-					maxf(lo - rel, rel - hi))
+			var violation := maxf(lo - rel, rel - hi)
+			if violation > max_violation:
+				max_violation = violation
 	_check(max_violation < 0.05, "PBD joint limits hold")
 	var drop := RagdollSolver.new()
 	drop.build(definition)

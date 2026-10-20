@@ -209,5 +209,5 @@ func _apply_tone(grab_bone: int) -> void:
 			spine_bone = i
 			break
 	if spine_bone >= 0:
-		# 抓取时不给躯干额外扶正，让头和四肢完整受重力。
-		solver.world_bias[spine_bone] = 0.0
+		# 抓取时给躯干很弱的世界空间支撑，避免整个人绕抓点翻转。
+		solver.world_bias[spine_bone] = 0.35

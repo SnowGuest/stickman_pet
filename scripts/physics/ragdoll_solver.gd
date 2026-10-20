@@ -20,12 +20,13 @@ var grab_t: float = 0.5
 var grab_local_offset: Vector2 = Vector2.ZERO
 var grab_target: Vector2 = Vector2.ZERO
 var grab_strength: float = 0.38
-var grab_angular_damping: float = 0.04
+var grab_angular_damping: float = 0.50
 var grab_vertical_damping: float = 1.0
 
 var gravity: float = 2300.0
-var damping: float = 0.985
-var max_speed: float = 2400.0
+var damping: float = 0.998
+var grab_damping: float = 0.985
+var max_speed: float = 6000.0
 var iterations: int = 8
 var max_corr: float = 0.20
 var floor_y: float = 1000.0
@@ -108,6 +109,10 @@ func build(definition: RigDefinition, p_view_scale: float = 1.0) -> void:
 			&"head":
 				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(18.0)
 				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(18.0)
+			&"foot_l", &"foot_r":
+				# 脚骨不参与渲染，放开限位，避免脚部约束反向拉扯小腿。
+				limit_lo[i] = -PI
+				limit_hi[i] = PI
 
 
 func sync_from_pose(pose: RigPose) -> void:
@@ -140,6 +145,7 @@ func start_from_pose(pose: RigPose, floor: float, left: float, right: float) -> 
 	floor_y = floor
 	wall_l = left
 	wall_r = right
+	damping = 0.998
 	sync_from_pose(pose)
 	for i in def.bones.size():
 		drive_rel[i] = pose.rel[i]
@@ -445,10 +451,12 @@ func begin_grab(bone: int, t: float, point: Vector2,
 	grab_target = point
 	sleeping = false
 	_rest_steps = 0
+	damping = grab_damping
 
 
 func end_grab() -> void:
 	grab_bone = -1
+	damping = 0.998
 
 
 func damp_velocities(factor: float) -> void:
