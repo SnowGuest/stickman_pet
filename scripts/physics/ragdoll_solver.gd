@@ -17,6 +17,7 @@ var subtree: Array[PackedInt32Array] = []
 
 var grab_bone: int = -1
 var grab_t: float = 0.5
+var grab_local_offset: Vector2 = Vector2.ZERO
 var grab_target: Vector2 = Vector2.ZERO
 var grab_strength: float = 0.38
 var grab_angular_damping: float = 0.04
@@ -35,12 +36,14 @@ var restitution: float = 0.0
 var friction: float = 0.72
 var contact_damping: float = 0.35
 var root_angle: float = 0.0
+var view_scale: float = 1.0
 var sleeping: bool = false
 var _rest_steps: int = 0
 
 
-func build(definition: RigDefinition) -> void:
+func build(definition: RigDefinition, p_view_scale: float = 1.0) -> void:
 	def = definition
+	view_scale = p_view_scale
 	var n := def.joints.size()
 	pos.resize(n)
 	prev.resize(n)
@@ -136,6 +139,22 @@ func step(h: float) -> void:
 	for _i in 8:
 		_solve_grab()
 		_solve_distances()
+	if grab_bone >= 0:
+		var head_idx := -1
+		var neck_idx := -1
+		for i in def.bones.size():
+			if def.bones[i].id == &"head":
+				head_idx = i
+			elif def.bones[i].id == &"neck":
+				neck_idx = i
+		if def.bones[grab_bone].id == &"head" or def.bones[grab_bone].id == &"neck":
+			# 头/颈很短，单独再投影几轮，避免抓头把颈骨拉长。
+			for _i in 6:
+				if neck_idx >= 0:
+					_solve_bone_length(neck_idx)
+				if head_idx >= 0:
+					_solve_bone_length(head_idx)
+			_solve_grab()
 	# 最后的距离/抓取可能再次把骨骼推过限位；下一子步会继续修正，
 	# 这里不再额外旋转，避免抓取时与鼠标目标形成来回拉扯。
 	# 所有约束结束后再做一次硬边界夹取，任何约束都不能把角色推出屏幕。
@@ -266,6 +285,24 @@ func _solve_world_bias(index: int, bone: BoneDef) -> void:
 	_rotate_subtree(index, clampf(err * k_iter, -max_corr, max_corr))
 
 
+func _solve_bone_length(index: int) -> void:
+	var b := def.bones[index]
+	var a := b.start_idx
+	var c := b.end_idx
+	var delta := pos[c] - pos[a]
+	var dist := delta.length()
+	if dist < 0.0001:
+		return
+	var wa := 0.0 if _is_grab_pinned(a) else inv_mass[a]
+	var wc := 0.0 if _is_grab_pinned(c) else inv_mass[c]
+	var wsum := wa + wc
+	if wsum <= 0.0:
+		return
+	var corr := delta * ((dist - b.length) / dist)
+	pos[a] += corr * (wa / wsum)
+	pos[c] -= corr * (wc / wsum)
+
+
 func _solve_grab() -> void:
 	if grab_bone < 0:
 		return
@@ -273,7 +310,7 @@ func _solve_grab() -> void:
 	var a := b.start_idx
 	var c := b.end_idx
 	var t := clampf(grab_t, 0.0, 1.0)
-	var cur := pos[a].lerp(pos[c], t)
+	var cur := pos[a].lerp(pos[c], t) + grab_local_offset
 	var target := grab_target
 	target.x = clampf(target.x, wall_l, wall_r)
 	target.y = clampf(target.y, ceiling_y, floor_y)
@@ -341,7 +378,28 @@ func _collect_subtree(index: int) -> PackedInt32Array:
 
 
 func pick(point: Vector2) -> Array:
-	var best := [-1, 0.0, INF]
+	var head_bone := -1
+	var neck_joint := -1
+	for i in def.bones.size():
+		if def.bones[i].id == &"head":
+			head_bone = i
+			neck_joint = def.bones[i].start_idx
+			break
+	if head_bone >= 0:
+		var head_center := pos[neck_joint] + Vector2(0.0,
+				-def.head_radius * view_scale)
+		var head_radius := (def.head_radius + def.head_line_width) * view_scale
+		if point.distance_to(head_center) <= head_radius:
+			var neck_bone := -1
+			for i in def.bones.size():
+				if def.bones[i].id == &"neck":
+					neck_bone = i
+					break
+			if neck_bone >= 0:
+				var offset := point - pos[neck_joint]
+				return [neck_bone, 1.0, 0.0, offset]
+
+	var best := [-1, 0.0, INF, Vector2.ZERO]
 	for i in def.bones.size():
 		var b := def.bones[i]
 		var a := pos[b.start_idx]
@@ -350,15 +408,17 @@ func pick(point: Vector2) -> Array:
 		var t := clampf((point - a).dot(ab) / maxf(ab.length_squared(), 1e-4),
 				0.0, 1.0)
 		var d := point.distance_to(a + ab * t)
-		var r := maxf(b.width * 2.4, 12.0) * def.base_scale
+		var r := maxf(b.width * 2.4, 12.0) * view_scale
 		if d <= r and d < best[2]:
-			best = [i, t, d]
+			best = [i, t, d, Vector2.ZERO]
 	return best
 
 
-func begin_grab(bone: int, t: float, point: Vector2) -> void:
+func begin_grab(bone: int, t: float, point: Vector2,
+		local_offset: Vector2 = Vector2.ZERO) -> void:
 	grab_bone = bone
 	grab_t = t
+	grab_local_offset = local_offset
 	grab_target = point
 	sleeping = false
 	_rest_steps = 0

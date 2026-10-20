@@ -361,6 +361,17 @@ func _test_physics() -> void:
 		max_speed = maxf(max_speed, drop.pos[i].distance_to(drop.prev[i]) * 120.0)
 	_check(max_speed < 40.0, "PBD residual speed")
 
+	var head_solver := RagdollSolver.new()
+	head_solver.build(definition)
+	head_solver.start_from_pose(pose, 900.0, 0.0, 1000.0)
+	var neck := definition.joint_pos(pose, &"neck_top")
+	var head_center := neck + Vector2(0.0, -definition.head_radius)
+	var head_hit := head_solver.pick(head_center)
+	_check(int(head_hit[0]) >= 0 and definition.bones[int(head_hit[0])].id in [&"head", &"neck"],
+			"head circle is pickable")
+	_check(head_hit.size() > 3 and (head_hit[3] as Vector2).length() > 0.0,
+			"head pick keeps circle offset")
+
 	var controller := PhysicsController.new()
 	controller.setup(definition)
 	var held_pose := definition.create_rest_pose()
@@ -468,6 +479,25 @@ func _test_physics() -> void:
 				stop_ctrl.solver.pos[i].distance_to(stop_ctrl.solver.prev[i]) * 120.0)
 	_check(stop_speed < 30.0, "grab settles after mouse stops")
 	stop_ctrl.free()
+
+	var head_ctrl := PhysicsController.new()
+	head_ctrl.setup(definition)
+	var head_pose := definition.create_rest_pose()
+	head_pose.root_pos = Vector2(500.0, 500.0)
+	RigState.resolve(definition, head_pose)
+	var head_grab_point := definition.joint_pos(head_pose, &"neck_top") \
+			+ Vector2(0.0, -definition.head_radius)
+	head_ctrl.start_with_pose(head_pose, head_grab_point, 900.0, 0.0, 1000.0)
+	for i in 60:
+		head_ctrl.drag(head_grab_point + Vector2(sin(i * 0.3) * 80.0, 0.0))
+		head_ctrl.tick(1.0 / 60.0, head_pose)
+	var head_error := 0.0
+	for b in definition.bones:
+		var length := head_ctrl.solver.pos[b.start_idx].distance_to(
+				head_ctrl.solver.pos[b.end_idx])
+		head_error = maxf(head_error, absf(length - b.length))
+	_check(head_error < 1.0, "head grab keeps bone length")
+	head_ctrl.free()
 	controller.free()
 
 

@@ -77,7 +77,7 @@ func _ready() -> void:
 
 	physics = PhysicsController.new()
 	add_child(physics)
-	physics.setup(definition)
+	physics.setup(definition, renderer.get_view_scale())
 	anim_player.event_fired.connect(func(event_name: String) -> void:
 		print("[anim] event=", event_name))
 

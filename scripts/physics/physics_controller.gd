@@ -25,10 +25,10 @@ var grab_still_damping: float = 0.10
 var _since_drag: float = 1.0
 
 
-func setup(p_definition: RigDefinition) -> void:
+func setup(p_definition: RigDefinition, view_scale: float = 1.0) -> void:
 	definition = p_definition
 	solver = RagdollSolver.new()
-	solver.build(definition)
+	solver.build(definition, view_scale)
 
 
 func start(pose: RigPose, floor: float, left: float, right: float) -> void:
@@ -50,9 +50,10 @@ func begin_drag(local: Vector2, floor: float, left: float, right: float) -> bool
 		return false
 	var bone := int(hit[0])
 	var t := float(hit[1])
+	var local_offset: Vector2 = hit[3] if hit.size() > 3 else Vector2.ZERO
 	var point := solver.pos[definition.bones[bone].start_idx].lerp(
-			solver.pos[definition.bones[bone].end_idx], t)
-	solver.begin_grab(bone, t, point)
+			solver.pos[definition.bones[bone].end_idx], t) + local_offset
+	solver.begin_grab(bone, t, point, local_offset)
 	_apply_tone(bone)
 	_grab_offset = local - point
 	_last_target = local
