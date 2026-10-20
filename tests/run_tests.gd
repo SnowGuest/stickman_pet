@@ -286,6 +286,7 @@ func _test_physics() -> void:
 	var solver := RagdollSolver.new()
 	solver.build(definition)
 	solver.start_from_pose(pose, 900.0, 0.0, 1000.0)
+	solver.apply_velocity(0, 0.5, Vector2(2400.0, -2000.0), 1.0 / 120.0)
 	for i in 600:
 		solver.step(1.0 / 120.0)
 	var max_error := 0.0
@@ -314,6 +315,15 @@ func _test_physics() -> void:
 		if not is_finite(p.x) or not is_finite(p.y):
 			finite = false
 	_check(finite, "PBD finite positions")
+	var bounded := true
+	for i in solver.pos.size():
+		var r := solver.radius[i]
+		if solver.pos[i].x < solver.wall_l + r - 0.01 \
+				or solver.pos[i].x > solver.wall_r - r + 0.01 \
+				or solver.pos[i].y < solver.ceiling_y + r - 0.01 \
+				or solver.pos[i].y > solver.floor_y - r + 0.01:
+			bounded = false
+	_check(bounded, "PBD stays inside screen bounds")
 
 
 func _test_passthrough() -> void:

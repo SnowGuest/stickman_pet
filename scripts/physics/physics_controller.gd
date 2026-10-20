@@ -14,6 +14,7 @@ var _grab_offset: Vector2 = Vector2.ZERO
 var _last_target: Vector2 = Vector2.ZERO
 var _velocity: Vector2 = Vector2.ZERO
 var _last_delta: float = 1.0 / 60.0
+var _render_prev: PackedVector2Array = PackedVector2Array()
 
 
 func setup(p_definition: RigDefinition) -> void:
@@ -29,6 +30,7 @@ func start(pose: RigPose, floor: float, left: float, right: float) -> void:
 	_rest_steps = 0
 	active = true
 	grabbing = false
+	_render_prev = solver.pos.duplicate()
 
 
 func begin_drag(local: Vector2, floor: float, left: float, right: float) -> bool:
@@ -43,6 +45,7 @@ func begin_drag(local: Vector2, floor: float, left: float, right: float) -> bool
 	var point := solver.pos[definition.bones[bone].start_idx].lerp(
 			solver.pos[definition.bones[bone].end_idx], t)
 	solver.begin_grab(bone, t, point)
+	_apply_tone(bone)
 	_grab_offset = local - point
 	_last_target = local
 	_velocity = Vector2.ZERO
@@ -95,6 +98,8 @@ func set_bounds(floor: float, left: float, right: float) -> void:
 func tick(dt: float, pose: RigPose) -> void:
 	if not active:
 		return
+	if _render_prev.size() != solver.pos.size():
+		_render_prev = solver.pos.duplicate()
 	_acc += minf(dt, 1.0 / 30.0)
 	var guard := 0
 	while _acc >= H and guard < 4:
@@ -107,4 +112,60 @@ func tick(dt: float, pose: RigPose) -> void:
 			solver.sleeping = true
 	else:
 		_rest_steps = 0
-	solver.write_pose(pose)
+	solver.write_pose_interpolated(pose, _render_prev, _acc / H)
+	_render_prev = solver.pos.duplicate()
+
+
+func _apply_tone(grab_bone: int) -> void:
+	var profile := {
+		&"spine": 0.42, &"neck": 0.30, &"head": 0.22,
+		&"upper_arm_l": 0.04, &"upper_arm_r": 0.04,
+		&"forearm_l": 0.02, &"forearm_r": 0.02,
+		&"thigh_l": 0.05, &"thigh_r": 0.05,
+		&"shin_l": 0.03, &"shin_r": 0.03,
+		&"foot_l": 0.02, &"foot_r": 0.02,
+	}
+	var bone_id := definition.bones[grab_bone].id
+	if bone_id == &"neck" or bone_id == &"head":
+		profile = {
+			&"spine": 0.10, &"neck": 0.06, &"head": 0.03,
+			&"upper_arm_l": 0.02, &"upper_arm_r": 0.02,
+			&"forearm_l": 0.01, &"forearm_r": 0.01,
+			&"thigh_l": 0.02, &"thigh_r": 0.02,
+			&"shin_l": 0.01, &"shin_r": 0.01,
+			&"foot_l": 0.01, &"foot_r": 0.01,
+		}
+	elif bone_id in [&"forearm_l", &"forearm_r", &"upper_arm_l", &"upper_arm_r"]:
+		profile = {
+			&"spine": 0.35, &"neck": 0.25, &"head": 0.20,
+			&"upper_arm_l": 0.08, &"upper_arm_r": 0.08,
+			&"forearm_l": 0.05, &"forearm_r": 0.05,
+			&"thigh_l": 0.06, &"thigh_r": 0.06,
+			&"shin_l": 0.04, &"shin_r": 0.04,
+			&"foot_l": 0.03, &"foot_r": 0.03,
+		}
+	elif bone_id in [&"thigh_l", &"thigh_r", &"shin_l", &"shin_r",
+			&"foot_l", &"foot_r"]:
+		profile = {
+			&"spine": 0.30, &"neck": 0.20, &"head": 0.15,
+			&"upper_arm_l": 0.03, &"upper_arm_r": 0.03,
+			&"forearm_l": 0.02, &"forearm_r": 0.02,
+			&"thigh_l": 0.10, &"thigh_r": 0.10,
+			&"shin_l": 0.06, &"shin_r": 0.06,
+			&"foot_l": 0.04, &"foot_r": 0.04,
+		}
+	for i in definition.bones.size():
+		solver.tone[i] = float(profile.get(definition.bones[i].id, 0.02))
+	var spine_bone := -1
+	for i in definition.bones.size():
+		if definition.bones[i].id == &"spine":
+			spine_bone = i
+			break
+	if spine_bone >= 0:
+		if bone_id == &"neck" or bone_id == &"head":
+			solver.world_bias[spine_bone] = 0.15
+		elif bone_id in [&"thigh_l", &"thigh_r", &"shin_l", &"shin_r",
+				&"foot_l", &"foot_r"]:
+			solver.world_bias[spine_bone] = 0.30
+		else:
+			solver.world_bias[spine_bone] = 0.45

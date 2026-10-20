@@ -23,6 +23,7 @@ var damping: float = 0.996
 var iterations: int = 8
 var max_corr: float = 0.20
 var floor_y: float = 1000.0
+var ceiling_y: float = 0.0
 var wall_l: float = 2.0
 var wall_r: float = 1918.0
 var restitution: float = 0.22
@@ -51,7 +52,13 @@ func build(definition: RigDefinition) -> void:
 		inv_mass[b.end_idx] += inv
 	for i in n:
 		inv_mass[i] = 1.0 / inv_mass[i] if inv_mass[i] > 0.0 else 0.0
-	radius[int(def.joint_index[&"head_top"])] = def.head_radius
+	var head_len := 10.0
+	for b in def.bones:
+		if b.id == &"head":
+			head_len = b.length
+			break
+	radius[int(def.joint_index[&"head_top"])] = maxf(def.head_radius * 2.0
+			- head_len, def.head_radius) + def.head_line_width * 0.5
 	for b in def.bones:
 		var r := maxf(b.width * 0.5, 1.5)
 		radius[b.start_idx] = maxf(radius[b.start_idx], r)
@@ -76,6 +83,19 @@ func write_pose(pose: RigPose) -> void:
 	pose.joint_pos = pos.duplicate()
 
 
+func write_pose_interpolated(pose: RigPose, from: PackedVector2Array,
+		alpha: float) -> void:
+	var pelvis := int(def.joint_index[&"pelvis"])
+	if from.size() != pos.size():
+		write_pose(pose)
+		return
+	pose.joint_pos.resize(pos.size())
+	var t := clampf(alpha, 0.0, 1.0)
+	for i in pos.size():
+		pose.joint_pos[i] = from[i].lerp(pos[i], t)
+	pose.root_pos = pose.joint_pos[pelvis]
+
+
 func start_from_pose(pose: RigPose, floor: float, left: float, right: float) -> void:
 	floor_y = floor
 	wall_l = left
@@ -84,6 +104,16 @@ func start_from_pose(pose: RigPose, floor: float, left: float, right: float) -> 
 	for i in def.bones.size():
 		drive_rel[i] = pose.rel[i]
 		tone[i] = 0.03
+		world_bias[i] = 0.0
+		bias_abs[i] = 0.0
+	var spine_bone := -1
+	for i in def.bones.size():
+		if def.bones[i].id == &"spine":
+			spine_bone = i
+			break
+	if spine_bone >= 0:
+		world_bias[spine_bone] = 0.45
+		bias_abs[spine_bone] = -PI * 0.5
 
 
 func step(h: float) -> void:
@@ -99,8 +129,11 @@ func step(h: float) -> void:
 	for _i in 2:
 		_solve_distances()
 	# 抓取点最后再收一次，保证指针位置优先于骨长残差。
-	for _i in 3:
+	for _i in 8:
 		_solve_grab()
+	# 所有约束结束后再做一次硬边界夹取，任何约束都不能把角色推出屏幕。
+	_solve_collisions()
+	_clamp_bounds()
 	for _i in pos.size():
 		if not is_finite(pos[_i].x) or not is_finite(pos[_i].y):
 			sync_from_pose_from_pos()
@@ -142,6 +175,8 @@ func _solve_angles() -> void:
 		# spine/thigh 的 parent 为空，其 rest/limit 是相对骨盆的旧表；
 		# P3 首版先让它们自由摆动，子骨骼仍受限位保护。
 		if b.parent_index < 0:
+			if b.id == &"spine" and world_bias[i] > 0.0:
+				_solve_world_bias(i, b)
 			continue
 		var cdir := pos[b.end_idx] - pos[b.start_idx]
 		if cdir.length_squared() < 1e-8:
@@ -175,6 +210,18 @@ func _solve_angles() -> void:
 		_rotate_subtree(i, clampf(err * k_iter, -max_corr, max_corr))
 
 
+func _solve_world_bias(index: int, bone: BoneDef) -> void:
+	var cdir := pos[bone.end_idx] - pos[bone.start_idx]
+	if cdir.length_squared() < 1e-8:
+		return
+	var err := wrapf(bias_abs[index] - cdir.angle(), -PI, PI)
+	if absf(err) < 0.004:
+		return
+	var k_iter := 1.0 - pow(1.0 - clampf(world_bias[index], 0.0, 0.999),
+			1.0 / float(iterations))
+	_rotate_subtree(index, clampf(err * k_iter, -max_corr, max_corr))
+
+
 func _solve_grab() -> void:
 	if grab_bone < 0:
 		return
@@ -183,7 +230,10 @@ func _solve_grab() -> void:
 	var c := b.end_idx
 	var t := clampf(grab_t, 0.0, 1.0)
 	var cur := pos[a].lerp(pos[c], t)
-	var delta := (grab_target - cur) * grab_strength
+	var target := grab_target
+	target.x = clampf(target.x, wall_l, wall_r)
+	target.y = clampf(target.y, ceiling_y, floor_y)
+	var delta := (target - cur) * grab_strength
 	var norm := 1.0 / maxf((1.0 - t) * (1.0 - t) + t * t, 1e-4)
 	pos[a] += delta * (1.0 - t) * norm
 	pos[c] += delta * t * norm
@@ -200,12 +250,22 @@ func _solve_collisions() -> void:
 			else:
 				prev[p].y = pos[p].y
 			prev[p].x = lerpf(prev[p].x, pos[p].x, friction)
+		if pos[p].y < ceiling_y + r:
+			pos[p].y = ceiling_y + r
+			prev[p].y = pos[p].y
 		if pos[p].x < wall_l + r:
 			pos[p].x = wall_l + r
 			prev[p].x = pos[p].x + restitution * (pos[p].x - prev[p].x)
 		elif pos[p].x > wall_r - r:
 			pos[p].x = wall_r - r
 			prev[p].x = pos[p].x + restitution * (pos[p].x - prev[p].x)
+
+
+func _clamp_bounds() -> void:
+	for p in pos.size():
+		var r := radius[p]
+		pos[p].x = clampf(pos[p].x, wall_l + r, wall_r - r)
+		pos[p].y = clampf(pos[p].y, ceiling_y + r, floor_y - r)
 
 
 func _rotate_subtree(index: int, angle: float) -> void:
