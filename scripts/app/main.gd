@@ -220,6 +220,7 @@ func _process(dt: float) -> void:
 		if brain != null:
 			pose.root_pos.y = _base_root_y + brain.body_bob()
 		RigState.resolve(definition, pose)
+		_apply_brain_tilt()
 		renderer.sync(pose)
 		if shadow != null:
 			shadow.update_from_pose(pose, brain != null and brain.state == PetBrain.State.WALK)
@@ -240,6 +241,7 @@ func _apply_layout() -> void:
 		anim_player.apply(pose)
 	_apply_brain_look()
 	RigState.resolve(definition, pose)
+	_apply_brain_tilt()
 	renderer.sync(pose)
 	if shadow != null:
 		shadow.floor_y = shell.local_floor_y()
@@ -284,6 +286,17 @@ func _on_brain_state_changed(next_state: int, _clip: StringName) -> void:
 		return
 	if next_state == PetBrain.State.WAVE:
 		audio.play("sfx_wave_whoosh", -12.0)
+
+
+func _apply_brain_tilt() -> void:
+	if brain == null:
+		return
+	var tilt := brain.body_tilt()
+	if is_zero_approx(tilt):
+		return
+	var pivot := pose.root_pos
+	for i in pose.joint_pos.size():
+		pose.joint_pos[i] = pivot + (pose.joint_pos[i] - pivot).rotated(tilt)
 
 
 func _apply_brain_look() -> void:

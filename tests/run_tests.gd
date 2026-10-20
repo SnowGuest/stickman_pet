@@ -255,8 +255,16 @@ func _test_animation() -> void:
 	for i in 40:
 		player.tick(1.0 / 60.0, pose)
 	player.play(&"walk", 0.2)
+	var fade_step := 0.0
+	var fade_prev: PackedVector2Array = PackedVector2Array()
 	for i in 40:
 		player.tick(1.0 / 60.0, pose)
+		RigState.resolve(definition, pose)
+		if i > 0:
+			for j in pose.joint_pos.size():
+				fade_step = maxf(fade_step, pose.joint_pos[j].distance_to(fade_prev[j]))
+		fade_prev = pose.joint_pos.duplicate()
+	_check(fade_step < 30.0, "crossfade has no visible jump")
 	var player_finite := true
 	for value in pose.rel:
 		if is_nan(value) or is_inf(value):
@@ -303,6 +311,13 @@ func _test_brain() -> void:
 	for i in 10:
 		brain.tick(1.0 / 60.0)
 	_check(brain.body_bob() <= 0.0, "walk adds body bob")
+	_check(absf(brain.body_tilt()) > 0.0, "walk adds body tilt")
+	brain.release_force()
+	var seen := {}
+	for i in 36000:
+		brain.tick(1.0 / 60.0)
+		seen[brain.state] = true
+	_check(seen.size() >= 3, "brain visits multiple states over 10 minutes")
 	brain.free()
 	player.free()
 

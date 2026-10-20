@@ -30,6 +30,13 @@ func body_bob() -> float:
 		return 0.0
 	return -absf(sin(state_time * 8.0)) * 1.6
 
+
+func body_tilt() -> float:
+	# 走路时整体轻微左右摆，保持单笔线条不拆层。
+	if state != State.WALK:
+		return 0.0
+	return sin(state_time * 4.0) * deg_to_rad(1.6)
+
 var _anim: AnimPlayer
 var _rng := RandomNumberGenerator.new()
 var _duration: float = 8.0
