@@ -18,8 +18,8 @@ var _render_prev: PackedVector2Array = PackedVector2Array()
 var _grab_raw: Vector2 = Vector2.ZERO
 var _grab_smooth: Vector2 = Vector2.ZERO
 var _grab_relative: PackedVector2Array = PackedVector2Array()
-var grab_smoothing: float = 7.0
-var grab_stabilization: float = 0.20
+var grab_smoothing: float = 12.0
+var grab_stabilization: float = 0.08
 
 
 func setup(p_definition: RigDefinition) -> void:
