@@ -95,6 +95,10 @@ func end_drag() -> void:
 		solver.world_bias[i] = 0.0
 
 
+func get_release_velocity() -> Vector2:
+	return _velocity
+
+
 func stop() -> void:
 	active = false
 	grabbing = false
