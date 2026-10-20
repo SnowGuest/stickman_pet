@@ -229,6 +229,8 @@ func _process(dt: float) -> void:
 		_last_view_size = view_size
 		_apply_layout()
 	shell.poll(dt)
+	if physics != null and physics.grabbing:
+		physics.drag(get_viewport().get_mouse_position())
 	if physics != null and physics.active:
 		physics.tick(dt, pose)
 		renderer.sync(pose)
@@ -335,14 +337,9 @@ func _build_context_menu() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion and physics != null and physics.grabbing:
-		var motion_local := shell.global_to_local(DisplayServer.mouse_get_position())
-		physics.drag(motion_local)
-		get_viewport().set_input_as_handled()
-		return
 	if not (event is InputEventMouseButton):
 		return
-	var local := shell.global_to_local(DisplayServer.mouse_get_position())
+	var local: Vector2 = event.position
 	if event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed and _is_over_pet(local):
 			var view_size := get_viewport().get_visible_rect().size
@@ -359,8 +356,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			print("[physics] grab local=", local)
 		elif not event.pressed and physics.grabbing:
-			physics.end_drag()
-			passthrough.unlock()
+			_finish_grab()
 			get_viewport().set_input_as_handled()
 			print("[physics] release")
 		return
@@ -370,6 +366,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	get_viewport().set_input_as_handled()
 	_open_context_menu(local)
+
+
+func _finish_grab() -> void:
+	if physics == null or not physics.grabbing:
+		return
+	physics.end_drag()
+	passthrough.unlock()
 
 
 func _open_context_menu(local: Vector2) -> void:
