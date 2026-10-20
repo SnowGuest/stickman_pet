@@ -88,9 +88,11 @@ func _build_character(viewport: SubViewport) -> void:
 			z = 0.0
 		var start_local := pose.joint_pos[b.start_idx]
 		var end_local := pose.joint_pos[b.end_idx]
-		if b.id == &"foot_l":
-			# 左脚向外撇，形成明确的 L 形双脚。
-			end_local.x = start_local.x * 2.0 - end_local.x
+		if b.id == &"foot_l" or b.id == &"foot_r":
+			# 视觉脚长缩短到 3px 左右。
+			end_local = start_local + (end_local - start_local) * 0.6
+			if b.id == &"foot_l":
+				end_local.x = start_local.x * 2.0 - end_local.x
 		_add_bone(viewport, start_local, end_local, z)
 		if b.id not in [&"spine", &"neck", &"head"]:
 			_add_joint(viewport, pose.joint_pos[b.start_idx], z)
