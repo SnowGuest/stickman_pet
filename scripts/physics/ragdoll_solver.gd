@@ -426,8 +426,8 @@ func pick(point: Vector2) -> Array:
 					neck_bone = i
 					break
 			if neck_bone >= 0:
-				var offset := point - pos[neck_joint]
-				return [neck_bone, 1.0, 0.0, offset]
+				# 头部圆只提供命中；物理抓点固定在 neck_top，避免大 offset 产生扭矩。
+				return [neck_bone, 1.0, 0.0, Vector2.ZERO]
 
 	var best := [-1, 0.0, INF, Vector2.ZERO]
 	var best_priority := -1

@@ -21,7 +21,7 @@
 - 7 个 OGG 音效入库（脚步/落地/挥动/坐下/挥手/鼓掌/弹出）
 - 挥手 whoosh 重命名为 `sfx_wave_whoosh.ogg`，抛出音效待补
 - `sfx_wave.ogg` 设为循环，用作连续挥手
-- P0 工程基线测试 140 项，替换占位测试入口
+- P0 工程基线测试 141 项，替换占位测试入口
 - `gate -Full` 增加主场景启动冒烟
 - 真实 Windows exe 导出成功（首版 117.92MB，P1 版 117.96MB），exe 冒烟退出 0
 - GitHub Actions 跑通，P0 工程基线 100% 完成
@@ -60,6 +60,7 @@
 - P3 躯干/肩稳定：max_corr 0.20→0.12，移除 spine 世界扶正，抓取角阻尼 0.35
 - P3 颈/头稳定：neck/head 限位收紧到 ±10°，spine ±15°，抓颈不再抖
 - P3 下臂稳定：抓臂时锁定肘相对角（tone 1.0），上肢速度额外阻尼，重叠命中容差 30px
+- P3 抓颈稳定：头部圆改为 neck_top 锚点，抓颈/躯干锁定 elbow+hand 相对 chest，下臂速度 <100
 - P3 坠落表演序列暂缓：移除 panic_fall/land/get_up，松手后恢复纯物理坠落
 - 托盘 helper 设置 `WS_EX_TOOLWINDOW`，隐藏 Alt+Tab/任务栏条目
 - 新增 `tools/test_alt_tab.ps1` 验收脚本

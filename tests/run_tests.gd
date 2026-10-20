@@ -386,8 +386,8 @@ func _test_physics() -> void:
 	var head_hit := head_solver.pick(head_center)
 	_check(int(head_hit[0]) >= 0 and definition.bones[int(head_hit[0])].id in [&"head", &"neck"],
 			"head circle is pickable")
-	_check(head_hit.size() > 3 and (head_hit[3] as Vector2).length() > 0.0,
-			"head pick keeps circle offset")
+	_check(head_hit.size() > 3 and (head_hit[3] as Vector2).length() < 0.01,
+			"head pick uses neck anchor")
 
 	var overlap_solver := RagdollSolver.new()
 	overlap_solver.build(definition)
@@ -506,6 +506,25 @@ func _test_physics() -> void:
 				stop_ctrl.solver.pos[i].distance_to(stop_ctrl.solver.prev[i]) * 120.0)
 	_check(stop_speed < 30.0, "grab settles after mouse stops")
 	stop_ctrl.free()
+
+	var neck_ctrl := PhysicsController.new()
+	neck_ctrl.setup(definition)
+	var neck_pose := definition.create_rest_pose()
+	neck_pose.root_pos = Vector2(500.0, 500.0)
+	RigState.resolve(definition, neck_pose)
+	var neck_point := definition.joint_pos(neck_pose, &"neck_top")
+	neck_ctrl.start_with_pose(neck_pose, neck_point, 900.0, 0.0, 1000.0)
+	var neck_fast := 0.0
+	for i in 90:
+		neck_ctrl.drag(neck_point + Vector2(sin(i * 0.2) * 30.0, 0.0))
+		neck_ctrl.tick(1.0 / 60.0, neck_pose)
+		for b in definition.bones:
+			if b.id in [&"forearm_l", &"forearm_r", &"neck"]:
+				neck_fast = maxf(neck_fast,
+						neck_ctrl.solver.pos[b.end_idx].distance_to(
+						neck_ctrl.solver.prev[b.end_idx]) * 120.0)
+	_check(neck_fast < 100.0, "neck grab keeps arms from flailing")
+	neck_ctrl.free()
 
 	var head_ctrl := PhysicsController.new()
 	head_ctrl.setup(definition)

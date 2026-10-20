@@ -21,6 +21,13 @@ var _grab_relative: PackedVector2Array = PackedVector2Array()
 var grab_smoothing: float = 14.0
 var grab_stabilization: float = 0.0
 var grab_still_delay: float = 0.08
+var verbose: bool = false
+var _log_acc: float = 0.0
+var _debug_file: FileAccess = null
+var _lock_arms: bool = false
+var _arm_joint_indices: PackedInt32Array = PackedInt32Array()
+var _arm_offsets: PackedVector2Array = PackedVector2Array()
+var _chest_joint: int = -1
 var _since_drag: float = 1.0
 
 
@@ -46,13 +53,30 @@ func begin_drag(local: Vector2, floor: float, left: float, right: float) -> bool
 		return false
 	var hit := solver.pick(local)
 	if int(hit[0]) < 0:
+		_debug_line("[pick] local=%s no bone" % local)
 		return false
 	var bone := int(hit[0])
 	var t := float(hit[1])
+	_debug_line("[pick] local=%s bone=%s t=%.3f dist=%.2f" % [
+		local, definition.bones[bone].id, t, float(hit[2])])
 	var local_offset: Vector2 = hit[3] if hit.size() > 3 else Vector2.ZERO
 	var point := solver.pos[definition.bones[bone].start_idx].lerp(
 			solver.pos[definition.bones[bone].end_idx], t) + local_offset
 	solver.begin_grab(bone, t, point, local_offset)
+	_debug_line("[grab] bone=%s t=%.3f point=%s offset=%s" % [
+		definition.bones[bone].id, t, point, local_offset])
+	_lock_arms = false
+	_arm_joint_indices.clear()
+	_arm_offsets.clear()
+	_chest_joint = int(definition.joint_index.get(&"chest", -1))
+	if definition.bones[bone].id in [&"neck", &"spine", &"head"] and _chest_joint >= 0:
+		_lock_arms = true
+		var chest_pos := solver.pos[_chest_joint]
+		for joint_id in [&"elbow_l", &"hand_l", &"elbow_r", &"hand_r"]:
+			var idx := int(definition.joint_index.get(joint_id, -1))
+			if idx >= 0:
+				_arm_joint_indices.append(idx)
+				_arm_offsets.append(solver.pos[idx] - chest_pos)
 	_apply_tone(bone)
 	_grab_offset = local - point
 	_last_target = local
@@ -91,10 +115,12 @@ func drag(local: Vector2) -> void:
 func end_drag() -> void:
 	if not grabbing:
 		return
+	_debug_line("[release]")
 	_velocity = _velocity.limit_length(2400.0)
 	solver.apply_velocity(solver.grab_bone, solver.grab_t, _velocity, H)
 	solver.end_grab()
 	solver.sleeping = false
+	_lock_arms = false
 	grabbing = false
 	# 松手后变成无肌肉张力的布娃娃，避免落地后还试图“站起来”。
 	for i in definition.bones.size():
@@ -145,6 +171,16 @@ func tick(dt: float, pose: RigPose) -> void:
 		solver.step(H)
 		guard += 1
 	if grabbing:
+		_log_acc += dt
+		if verbose and _log_acc >= 1.0 / 60.0:
+			_log_acc = 0.0
+			_log_grab_state()
+		if _lock_arms and _chest_joint >= 0:
+			var chest_pos := solver.pos[_chest_joint]
+			for i in _arm_joint_indices.size():
+				var idx := _arm_joint_indices[i]
+				solver.pos[idx] = chest_pos + _arm_offsets[i]
+				solver.prev[idx] = solver.pos[idx]
 		_rest_steps = 0
 		# 手臂是二级摆动链，抓颈/肩时末端容易放大抖动；单独阻尼上肢。
 		solver.damp_bone_motion([&"upper_arm_l", &"upper_arm_r",
@@ -178,6 +214,44 @@ func _hold_relative_angle(bone_id: StringName, strength: float) -> void:
 		solver.drive_rel[i] = wrapf(child_dir.angle() - parent_dir.angle(),
 				-PI, PI)
 		solver.tone[i] = strength
+
+
+func _debug_line(text: String) -> void:
+	if not verbose:
+		return
+	print(text)
+	if _debug_file == null:
+		var path := "user://grab_debug.log"
+		if not FileAccess.file_exists(path):
+			var created := FileAccess.open(path, FileAccess.WRITE)
+			if created != null:
+				created.close()
+		_debug_file = FileAccess.open(path, FileAccess.READ_WRITE)
+		if _debug_file != null:
+			_debug_file.seek_end()
+	if _debug_file != null:
+		_debug_file.store_line(text)
+		_debug_file.flush()
+
+
+func _log_grab_state() -> void:
+	var parts := PackedStringArray()
+	for wanted in [&"spine", &"neck", &"head", &"upper_arm_l", &"upper_arm_r",
+			&"forearm_l", &"forearm_r"]:
+		for i in definition.bones.size():
+			var b := definition.bones[i]
+			if b.id != wanted or b.parent_index < 0:
+				continue
+			var pb := definition.bones[b.parent_index]
+			var cdir := solver.pos[b.end_idx] - solver.pos[b.start_idx]
+			var pdir := solver.pos[pb.end_idx] - solver.pos[pb.start_idx]
+			var vel := (solver.pos[b.end_idx] - solver.prev[b.end_idx]).length() * 120.0
+			var rel := wrapf(cdir.angle() - pdir.angle(), -PI, PI)
+			parts.append("%s=%.0f/%.0f" % [b.id, rad_to_deg(rel), vel])
+			break
+	_debug_line("[phys] grab=%s t=%.2f raw=%s smooth=%s sleep=%s %s" % [
+		definition.bones[solver.grab_bone].id, solver.grab_t,
+		_grab_raw, _grab_smooth, solver.sleeping, " ".join(parts)])
 
 
 func _apply_tone(grab_bone: int) -> void:

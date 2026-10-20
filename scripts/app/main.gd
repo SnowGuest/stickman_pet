@@ -77,6 +77,7 @@ func _ready() -> void:
 	physics = PhysicsController.new()
 	add_child(physics)
 	physics.setup(definition, renderer.get_view_scale())
+	physics.verbose = debug_mode
 	anim_player.event_fired.connect(func(event_name: String) -> void:
 		print("[anim] event=", event_name))
 
