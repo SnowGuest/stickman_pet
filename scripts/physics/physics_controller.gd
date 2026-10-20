@@ -21,7 +21,6 @@ var _grab_relative: PackedVector2Array = PackedVector2Array()
 var grab_smoothing: float = 14.0
 var grab_stabilization: float = 0.0
 var grab_still_delay: float = 0.08
-var grab_still_damping: float = 0.10
 var _since_drag: float = 1.0
 
 
@@ -86,6 +85,7 @@ func drag(local: Vector2) -> void:
 	_last_delta = 1.0 / 60.0
 	_grab_raw = local + _grab_offset
 	_since_drag = 0.0
+	solver.sleeping = false
 
 
 func end_drag() -> void:
@@ -94,6 +94,7 @@ func end_drag() -> void:
 	_velocity = _velocity.limit_length(2400.0)
 	solver.apply_velocity(solver.grab_bone, solver.grab_t, _velocity, H)
 	solver.end_grab()
+	solver.sleeping = false
 	grabbing = false
 	# 松手后变成无肌肉张力的布娃娃，避免落地后还试图“站起来”。
 	for i in definition.bones.size():
@@ -128,10 +129,12 @@ func tick(dt: float, pose: RigPose) -> void:
 	if grabbing:
 		_since_drag += dt
 		if _since_drag > grab_still_delay:
-			# 鼠标停住后快速收掉残余速度，避免关节惯性在抓点附近抽动。
+			# 鼠标停住后冻结求解器，避免关节惯性在抓点附近抽动。
 			solver.grab_target = _grab_raw
-			solver.damp_velocities(grab_still_damping)
+			solver.damp_velocities(0.0)
+			solver.sleeping = true
 		else:
+			solver.sleeping = false
 			_grab_smooth = _grab_smooth.lerp(_grab_raw,
 					1.0 - exp(-grab_smoothing * dt))
 			solver.grab_target = _grab_smooth

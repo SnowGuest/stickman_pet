@@ -85,6 +85,29 @@ func build(definition: RigDefinition, p_view_scale: float = 1.0) -> void:
 		var max_limit := maxf(def.bones[i].limit_lo_deg, def.bones[i].limit_hi_deg)
 		limit_lo[i] = def.bones[i].rest_rel + deg_to_rad(min_limit)
 		limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(max_limit)
+		# 人体活动范围覆盖（相对静止角）。左右镜像符号相反。
+		match def.bones[i].id:
+			&"forearm_l":
+				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(20.0)
+				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(150.0)
+			&"forearm_r":
+				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(150.0)
+				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(20.0)
+			&"shin_l":
+				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(90.0)
+				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(10.0)
+			&"shin_r":
+				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(10.0)
+				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(90.0)
+			&"spine":
+				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(18.0)
+				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(18.0)
+			&"neck":
+				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(22.0)
+				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(22.0)
+			&"head":
+				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(18.0)
+				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(18.0)
 
 
 func sync_from_pose(pose: RigPose) -> void:
