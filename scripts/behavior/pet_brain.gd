@@ -5,6 +5,7 @@ extends Node
 ## 不做路径寻找和物理；角色始终留在桌面原位。
 
 signal state_changed(state: int, clip: StringName)
+signal footstep
 
 enum State { IDLE, WALK, WAVE, LOOK }
 
@@ -17,11 +18,16 @@ const CLIP_BY_STATE := {
 
 var state: State = State.IDLE
 var state_time: float = 0.0
+var look_angle: float = 0.0
+var energy: float = 0.85
+var boredom: float = 0.15
+var curiosity: float = 0.60
 
 var _anim: AnimPlayer
 var _rng := RandomNumberGenerator.new()
 var _duration: float = 8.0
 var _forced: bool = false
+var _step_acc: float = 0.0
 
 const DURATION_RANGES := {
 	State.IDLE: Vector2(7.0, 14.0),
@@ -48,6 +54,23 @@ func tick(dt: float) -> void:
 	if _anim == null:
 		return
 	state_time += dt
+	energy = clampf(energy - dt * (0.004 if state == State.WALK else 0.0015),
+			0.0, 1.0)
+	boredom = clampf(boredom + dt * (0.010 if state == State.IDLE else 0.003),
+			0.0, 1.0)
+	curiosity = clampf(curiosity + dt * 0.002, 0.0, 1.0)
+	if state == State.LOOK:
+		# 无脸表演：只转头/上身，不做眼部或面部动画。
+		look_angle = sin(state_time * 1.6) * deg_to_rad(18.0)
+	else:
+		look_angle = move_toward(look_angle, 0.0, dt * 2.0)
+	if state == State.WALK:
+		_step_acc += dt
+		if _step_acc >= 0.5:
+			_step_acc = 0.0
+			footstep.emit()
+	else:
+		_step_acc = 0.0
 	if _forced:
 		return
 	if state_time < _duration:
@@ -67,6 +90,7 @@ func release_force() -> void:
 func _enter(next_state: State) -> void:
 	state = next_state
 	state_time = 0.0
+	look_angle = 0.0
 	var duration_range: Vector2 = DURATION_RANGES[next_state]
 	_duration = _rng.randf_range(duration_range.x, duration_range.y)
 	var clip := StringName(CLIP_BY_STATE[next_state])
@@ -77,11 +101,24 @@ func _enter(next_state: State) -> void:
 
 func _pick_next() -> State:
 	var options: Array = NEXT_WEIGHTS[state]
+	var weighted: Array = []
 	var total := 0.0
 	for option in options:
-		total += float(option[1])
+		var next_state: State = option[0]
+		var weight := float(option[1])
+		match next_state:
+			State.WALK:
+				weight *= (0.65 + boredom * 0.8) * (0.6 + energy)
+			State.WAVE:
+				weight *= (0.7 + curiosity * 0.5)
+			State.LOOK:
+				weight *= (0.6 + curiosity)
+			State.IDLE:
+				weight *= (1.4 - energy * 0.5)
+		weighted.append([next_state, weight])
+		total += weight
 	var roll := _rng.randf() * total
-	for option in options:
+	for option in weighted:
 		roll -= float(option[1])
 		if roll <= 0.0:
 			return option[0]

@@ -13,6 +13,8 @@ var tray: TrayService
 var anim_library: AnimLibrary
 var anim_player: AnimPlayer
 var brain: PetBrain
+var shadow: PetShadow
+var audio: AudioService
 
 var palette_data: Dictionary = {}
 var palette_index: int = 1
@@ -57,6 +59,9 @@ func _ready() -> void:
 	add_child(renderer)
 	renderer.setup(definition, palette_data, PALETTE_ORDER[palette_index],
 			shell.dpi_scale)
+	shadow = PetShadow.new()
+	add_child(shadow)
+	shadow.setup(shell.local_floor_y(), renderer.get_view_scale())
 
 	anim_library = AnimLibrary.new()
 	if not anim_library.load_dir("res://assets/anims", definition):
@@ -74,6 +79,14 @@ func _ready() -> void:
 		brain = PetBrain.new()
 		add_child(brain)
 		brain.setup(anim_player)
+		brain.state_changed.connect(_on_brain_state_changed)
+		brain.footstep.connect(func() -> void:
+			if audio != null:
+				audio.play("sfx_step_01", -14.0))
+
+	audio = AudioService.new()
+	add_child(audio)
+	audio.setup()
 
 	anim_player.event_fired.connect(func(event_name: String) -> void:
 		print("[anim] event=", event_name))
@@ -202,8 +215,11 @@ func _process(dt: float) -> void:
 		if brain != null:
 			brain.tick(dt)
 		anim_player.tick(dt, pose)
+		_apply_brain_look()
 		RigState.resolve(definition, pose)
 		renderer.sync(pose)
+		if shadow != null:
+			shadow.update_from_pose(pose, brain != null and brain.state == PetBrain.State.WALK)
 	if passthrough != null:
 		passthrough.tick(dt, definition, pose, renderer.get_view_scale())
 
@@ -218,8 +234,12 @@ func _apply_layout() -> void:
 	_place_pet()
 	if anim_player != null:
 		anim_player.apply(pose)
+	_apply_brain_look()
 	RigState.resolve(definition, pose)
 	renderer.sync(pose)
+	if shadow != null:
+		shadow.floor_y = shell.local_floor_y()
+		shadow.update_from_pose(pose, brain != null and brain.state == PetBrain.State.WALK)
 	if passthrough != null:
 		passthrough.unlock()
 		passthrough.tick(0.0, definition, pose, renderer.get_view_scale())
@@ -253,6 +273,24 @@ func _update_anim_highlight() -> void:
 	if debug == null or anim_player == null or anim_player.current == null:
 		return
 	debug.highlight_bones = anim_player.current.tracks.duplicate()
+
+
+func _on_brain_state_changed(next_state: int, _clip: StringName) -> void:
+	if audio == null:
+		return
+	if next_state == PetBrain.State.WAVE:
+		audio.play("sfx_wave_whoosh", -12.0)
+
+
+func _apply_brain_look() -> void:
+	if brain == null or is_zero_approx(brain.look_angle):
+		return
+	for i in definition.bones.size():
+		var bone_id := definition.bones[i].id
+		if bone_id == &"neck":
+			pose.rel[i] += brain.look_angle * 0.35
+		elif bone_id == &"head":
+			pose.rel[i] += brain.look_angle
 
 
 func _set_palette_by_name(palette_name: String) -> void:
