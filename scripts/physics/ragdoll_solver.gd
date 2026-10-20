@@ -18,12 +18,12 @@ var subtree: Array[PackedInt32Array] = []
 var grab_bone: int = -1
 var grab_t: float = 0.5
 var grab_target: Vector2 = Vector2.ZERO
-var grab_strength: float = 0.40
-var grab_angular_damping: float = 0.07
-var grab_vertical_damping: float = 0.90
+var grab_strength: float = 0.38
+var grab_angular_damping: float = 0.04
+var grab_vertical_damping: float = 1.0
 
-var gravity: float = 1500.0
-var damping: float = 0.990
+var gravity: float = 2300.0
+var damping: float = 0.985
 var max_speed: float = 2400.0
 var iterations: int = 8
 var max_corr: float = 0.20

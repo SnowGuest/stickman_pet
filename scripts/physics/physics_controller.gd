@@ -18,8 +18,8 @@ var _render_prev: PackedVector2Array = PackedVector2Array()
 var _grab_raw: Vector2 = Vector2.ZERO
 var _grab_smooth: Vector2 = Vector2.ZERO
 var _grab_relative: PackedVector2Array = PackedVector2Array()
-var grab_smoothing: float = 12.0
-var grab_stabilization: float = 0.08
+var grab_smoothing: float = 14.0
+var grab_stabilization: float = 0.0
 
 
 func setup(p_definition: RigDefinition) -> void:
@@ -133,7 +133,7 @@ func tick(dt: float, pose: RigPose) -> void:
 			solver.sleeping = true
 	else:
 		_rest_steps = 0
-	if grabbing and _grab_relative.size() == solver.pos.size():
+	if grabbing and grab_stabilization > 0.0 and _grab_relative.size() == solver.pos.size():
 		# 搬运稳定：向“抓点 + 初始相对位置”做少量刚性混合，
 		# 保留重力和碰撞，但抑制左右平移诱发的上下摆动。
 		for i in solver.pos.size():
@@ -190,5 +190,5 @@ func _apply_tone(grab_bone: int) -> void:
 			spine_bone = i
 			break
 	if spine_bone >= 0:
-		# 抓取时只给躯干很弱的世界空间支撑，配合切向阻尼抑制上下乱摆。
-		solver.world_bias[spine_bone] = 0.35
+		# 抓取时不给躯干额外扶正，让头和四肢完整受重力。
+		solver.world_bias[spine_bone] = 0.0
