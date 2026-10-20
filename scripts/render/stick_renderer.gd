@@ -7,8 +7,11 @@ var palette_color: Color = Color("#FF6600")
 var head_hollow: bool = true
 
 var _stroke: Line2D
+var _layer_back: Line2D
+var _layer_front: Line2D
 var _head: StickHead
 var _view_scale: float = 1.25
+var _layered: bool = false
 
 
 func setup(p_definition: RigDefinition, palette: Dictionary, palette_name: String,
@@ -16,20 +19,40 @@ func setup(p_definition: RigDefinition, palette: Dictionary, palette_name: Strin
 	definition = p_definition
 	_view_scale = definition.base_scale * dpi_scale
 	scale = Vector2.ONE * _view_scale
-	_stroke = Line2D.new()
-	_stroke.name = "Stroke"
-	_stroke.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	_stroke.end_cap_mode = Line2D.LINE_CAP_ROUND
-	_stroke.joint_mode = Line2D.LINE_JOINT_ROUND
-	_stroke.antialiased = true
-	_stroke.round_precision = 8
-	_stroke.width = definition.line_width
-	add_child(_stroke)
+	_layer_back = _make_stroke("StrokeBack", -2)
+	_stroke = _make_stroke("Stroke", 0)
+	_layer_front = _make_stroke("StrokeFront", 2)
 	_head = StickHead.new()
 	_head.name = "HeadCircle"
 	_head.z_index = 20
 	add_child(_head)
 	set_palette(palette, palette_name)
+
+
+func _make_stroke(stroke_name: String, z: int) -> Line2D:
+	var stroke := Line2D.new()
+	stroke.name = stroke_name
+	stroke.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	stroke.end_cap_mode = Line2D.LINE_CAP_ROUND
+	stroke.joint_mode = Line2D.LINE_JOINT_ROUND
+	stroke.antialiased = true
+	stroke.round_precision = 8
+	stroke.width = definition.line_width
+	stroke.z_index = z
+	add_child(stroke)
+	return stroke
+
+
+func set_layered(enabled: bool) -> void:
+	_layered = enabled
+	_layer_back.visible = enabled
+	_layer_front.visible = enabled
+	if pose != null:
+		sync(pose)
+
+
+func is_layered() -> bool:
+	return _layered
 
 
 func set_palette(palette: Dictionary, palette_name: String) -> void:
@@ -40,6 +63,8 @@ func set_palette(palette: Dictionary, palette_name: String) -> void:
 	palette_color = Color(str(entry.get("color", "#FF6600")))
 	head_hollow = str(entry.get("head", "filled")) == "hollow"
 	_stroke.default_color = palette_color
+	_layer_back.default_color = palette_color
+	_layer_front.default_color = palette_color
 	_head.configure(definition.head_radius, palette_color, head_hollow,
 			definition.head_line_width)
 
@@ -49,9 +74,47 @@ func sync(p_pose: RigPose) -> void:
 		return
 	pose = p_pose
 	position = pose.root_pos
-	_stroke.points = _build_path(pose)
+	if _layered:
+		_layer_back.points = _build_back_path(pose)
+		_stroke.points = _build_body_path(pose)
+		_layer_front.points = _build_front_path(pose)
+	else:
+		_stroke.points = _build_path(pose)
 	var neck := pose.joint_pos[int(definition.joint_index[&"neck_top"])]
 	_head.position = neck - pose.root_pos + Vector2(0.0, -definition.head_radius)
+
+
+func _build_back_path(p: RigPose) -> PackedVector2Array:
+	var points: Array[Vector2] = []
+	_append(points, p, &"hand_l")
+	_append(points, p, &"elbow_l")
+	_append(points, p, &"chest")
+	_append(points, p, &"pelvis")
+	_append(points, p, &"knee_l")
+	_append(points, p, &"ankle_l")
+	return PackedVector2Array(points)
+
+
+func _build_body_path(p: RigPose) -> PackedVector2Array:
+	var points: Array[Vector2] = []
+	_append(points, p, &"chest")
+	_append(points, p, &"neck_top")
+	_append(points, p, &"chest")
+	_append(points, p, &"pelvis")
+	return PackedVector2Array(points)
+
+
+func _build_front_path(p: RigPose) -> PackedVector2Array:
+	var points: Array[Vector2] = []
+	_append(points, p, &"pelvis")
+	_append(points, p, &"knee_r")
+	_append(points, p, &"ankle_r")
+	_append(points, p, &"knee_r")
+	_append(points, p, &"pelvis")
+	_append(points, p, &"chest")
+	_append(points, p, &"elbow_r")
+	_append(points, p, &"hand_r")
+	return PackedVector2Array(points)
 
 
 func _build_path(p: RigPose) -> PackedVector2Array:
@@ -106,6 +169,10 @@ func get_stroke_width() -> float:
 func set_line_width(value: float) -> void:
 	if _stroke != null:
 		_stroke.width = value
+	if _layer_back != null:
+		_layer_back.width = value
+	if _layer_front != null:
+		_layer_front.width = value
 	if _head != null:
 		_head.line_width = value
 		_head.queue_redraw()

@@ -30,6 +30,7 @@ func _ready() -> void:
 	var safe_mode := args.has("--safe")
 	var no_passthrough := args.has("--no-passthrough")
 	var screenshot_mode := args.has("--screenshot") or args.has("--pet-screenshot")
+	var layered_mode := args.has("--layered")
 	var anim_override := &""
 	var anim_time := 0.0
 	for arg in args:
@@ -60,6 +61,7 @@ func _ready() -> void:
 	add_child(renderer)
 	renderer.setup(definition, palette_data, PALETTE_ORDER[palette_index],
 			shell.dpi_scale)
+	renderer.set_layered(layered_mode)
 	shadow = PetShadow.new()
 	add_child(shadow)
 	shadow.setup(shell.local_floor_y(), renderer.get_view_scale())
