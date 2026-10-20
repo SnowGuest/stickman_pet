@@ -126,31 +126,23 @@ func _sync_sdf(p: RigPose) -> void:
 	var view_size := get_viewport().get_visible_rect().size
 	var segments := PackedVector4Array()
 	for b in definition.bones:
-		var start := to_global(p.joint_pos[b.start_idx] - p.root_pos)
-		var end := to_global(p.joint_pos[b.end_idx] - p.root_pos)
+		if b.id in [&"upper_arm_l", &"forearm_l", &"upper_arm_r", &"forearm_r"]:
+			continue
+		var start := _joint_screen(p, b.start_idx)
+		var end := _joint_screen(p, b.end_idx)
 		if b.id == &"foot_l" or b.id == &"foot_r":
 			end = start + (end - start) * 0.6
 			if b.id == &"foot_l":
 				end.x = start.x * 2.0 - end.x
 		segments.append(Vector4(start.x, start.y, end.x, end.y))
-	var neck := to_global(p.joint_pos[definition.joint_index[&"neck_top"]] -
-			p.root_pos)
+	_append_arm_curve(segments, p, &"upper_arm_l", &"forearm_l")
+	_append_arm_curve(segments, p, &"upper_arm_r", &"forearm_r")
+	var neck := _joint_screen(p, definition.joint_index[&"neck_top"])
 	var head_center := neck + Vector2(0.0, -definition.head_radius *
 			_view_scale)
 	_sdf_material.set_shader_parameter("screen_size", view_size)
-	_sdf_material.set_shader_parameter("seg0", segments[0])
-	_sdf_material.set_shader_parameter("seg1", segments[1])
-	_sdf_material.set_shader_parameter("seg2", segments[2])
-	_sdf_material.set_shader_parameter("seg3", segments[3])
-	_sdf_material.set_shader_parameter("seg4", segments[4])
-	_sdf_material.set_shader_parameter("seg5", segments[5])
-	_sdf_material.set_shader_parameter("seg6", segments[6])
-	_sdf_material.set_shader_parameter("seg7", segments[7])
-	_sdf_material.set_shader_parameter("seg8", segments[8])
-	_sdf_material.set_shader_parameter("seg9", segments[9])
-	_sdf_material.set_shader_parameter("seg10", segments[10])
-	_sdf_material.set_shader_parameter("seg11", segments[11])
-	_sdf_material.set_shader_parameter("seg12", segments[12])
+	for i in segments.size():
+		_sdf_material.set_shader_parameter("seg%d" % i, segments[i])
 	_sdf_material.set_shader_parameter("line_radius",
 			definition.line_width * _view_scale * 0.5)
 	_sdf_material.set_shader_parameter("head_center", head_center)
@@ -158,6 +150,35 @@ func _sync_sdf(p: RigPose) -> void:
 			definition.head_radius * _view_scale)
 	_sdf_material.set_shader_parameter("head_half_width",
 			definition.head_line_width * _view_scale * 0.5)
+
+
+func _joint_screen(p: RigPose, joint_index: int) -> Vector2:
+	return to_global(p.joint_pos[joint_index] - p.root_pos)
+
+
+func _bone_index(bone_id: StringName) -> int:
+	for i in definition.bones.size():
+		if definition.bones[i].id == bone_id:
+			return i
+	return -1
+
+
+func _append_arm_curve(segments: PackedVector4Array, p: RigPose,
+		upper_id: StringName, fore_id: StringName) -> void:
+	var upper_index := _bone_index(upper_id)
+	var fore_index := _bone_index(fore_id)
+	if upper_index < 0 or fore_index < 0:
+		return
+	var shoulder := _joint_screen(p, definition.bones[upper_index].start_idx)
+	var elbow := _joint_screen(p, definition.bones[upper_index].end_idx)
+	var hand := _joint_screen(p, definition.bones[fore_index].end_idx)
+	var prev := shoulder
+	for step in 4:
+		var t := float(step + 1) / 4.0
+		var point := (shoulder * pow(1.0 - t, 2.0)
+				+ elbow * 2.0 * (1.0 - t) * t + hand * t * t)
+		segments.append(Vector4(prev.x, prev.y, point.x, point.y))
+		prev = point
 
 
 func _build_back_path(p: RigPose) -> PackedVector2Array:
