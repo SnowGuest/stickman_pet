@@ -75,9 +75,14 @@ func drag(local: Vector2) -> void:
 func end_drag() -> void:
 	if not grabbing:
 		return
+	_velocity = _velocity.limit_length(2400.0)
 	solver.apply_velocity(solver.grab_bone, solver.grab_t, _velocity, H)
 	solver.end_grab()
 	grabbing = false
+	# 松手后变成无肌肉张力的布娃娃，避免落地后还试图“站起来”。
+	for i in definition.bones.size():
+		solver.tone[i] = 0.0
+		solver.world_bias[i] = 0.0
 
 
 func stop() -> void:

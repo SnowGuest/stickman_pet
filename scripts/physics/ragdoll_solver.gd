@@ -18,18 +18,21 @@ var grab_t: float = 0.5
 var grab_target: Vector2 = Vector2.ZERO
 var grab_strength: float = 0.55
 
-var gravity: float = 1200.0
-var damping: float = 0.996
+var gravity: float = 1500.0
+var damping: float = 0.990
+var max_speed: float = 2400.0
 var iterations: int = 8
 var max_corr: float = 0.20
 var floor_y: float = 1000.0
 var ceiling_y: float = 0.0
 var wall_l: float = 2.0
 var wall_r: float = 1918.0
-var restitution: float = 0.22
-var friction: float = 0.35
+var restitution: float = 0.0
+var friction: float = 0.72
+var contact_damping: float = 0.35
 var root_angle: float = 0.0
 var sleeping: bool = false
+var _rest_steps: int = 0
 
 
 func build(definition: RigDefinition) -> void:
@@ -75,6 +78,7 @@ func sync_from_pose(pose: RigPose) -> void:
 	pos = pose.joint_pos.duplicate()
 	prev = pos.duplicate()
 	sleeping = false
+	_rest_steps = 0
 
 
 func write_pose(pose: RigPose) -> void:
@@ -103,17 +107,9 @@ func start_from_pose(pose: RigPose, floor: float, left: float, right: float) -> 
 	sync_from_pose(pose)
 	for i in def.bones.size():
 		drive_rel[i] = pose.rel[i]
-		tone[i] = 0.03
+		tone[i] = 0.0
 		world_bias[i] = 0.0
 		bias_abs[i] = 0.0
-	var spine_bone := -1
-	for i in def.bones.size():
-		if def.bones[i].id == &"spine":
-			spine_bone = i
-			break
-	if spine_bone >= 0:
-		world_bias[spine_bone] = 0.45
-		bias_abs[spine_bone] = -PI * 0.5
 
 
 func step(h: float) -> void:
@@ -126,7 +122,7 @@ func step(h: float) -> void:
 		_solve_grab()
 		_solve_collisions()
 	# 最后一次角度/碰撞可能轻微拉伸骨长，收尾再投影回距离约束。
-	for _i in 2:
+	for _i in 4:
 		_solve_distances()
 	# 抓取点最后再收一次，保证指针位置优先于骨长残差。
 	for _i in 8:
@@ -134,6 +130,17 @@ func step(h: float) -> void:
 	# 所有约束结束后再做一次硬边界夹取，任何约束都不能把角色推出屏幕。
 	_solve_collisions()
 	_clamp_bounds()
+	# 约束求解会注入额外速度；松手状态下每步再耗散一部分，避免“果冻/皮球”感。
+	if grab_bone < 0:
+		for p in pos.size():
+			var velocity := (pos[p] - prev[p]) * 0.40
+			prev[p] = pos[p] - velocity
+		if is_resting():
+			_rest_steps += 1
+			if _rest_steps >= 60:
+				sleeping = true
+		else:
+			_rest_steps = 0
 	for _i in pos.size():
 		if not is_finite(pos[_i].x) or not is_finite(pos[_i].y):
 			sync_from_pose_from_pos()
@@ -147,6 +154,7 @@ func _integrate(h: float) -> void:
 			prev[p] = pos[p]
 			continue
 		var velocity := (pos[p] - prev[p]) * damping
+		velocity = velocity.limit_length(max_speed * h)
 		prev[p] = pos[p]
 		pos[p] += velocity + g
 
@@ -243,29 +251,30 @@ func _solve_collisions() -> void:
 	for p in pos.size():
 		var r := radius[p]
 		if pos[p].y > floor_y - r:
-			var vy := pos[p].y - prev[p].y
 			pos[p].y = floor_y - r
-			if vy > 2.0:
-				prev[p].y = pos[p].y + restitution * vy
-			else:
-				prev[p].y = pos[p].y
-			prev[p].x = lerpf(prev[p].x, pos[p].x, friction)
+			# 地面不反弹；只保留很小的接触阻尼，避免“皮球感”。
+			prev[p].y = pos[p].y
+			var vx := pos[p].x - prev[p].x
+			prev[p].x = pos[p].x - vx * (1.0 - friction) * contact_damping
 		if pos[p].y < ceiling_y + r:
 			pos[p].y = ceiling_y + r
 			prev[p].y = pos[p].y
 		if pos[p].x < wall_l + r:
 			pos[p].x = wall_l + r
-			prev[p].x = pos[p].x + restitution * (pos[p].x - prev[p].x)
+			prev[p].x = pos[p].x
 		elif pos[p].x > wall_r - r:
 			pos[p].x = wall_r - r
-			prev[p].x = pos[p].x + restitution * (pos[p].x - prev[p].x)
+			prev[p].x = pos[p].x
 
 
 func _clamp_bounds() -> void:
 	for p in pos.size():
 		var r := radius[p]
+		var before := pos[p]
 		pos[p].x = clampf(pos[p].x, wall_l + r, wall_r - r)
 		pos[p].y = clampf(pos[p].y, ceiling_y + r, floor_y - r)
+		if pos[p] != before:
+			prev[p] = pos[p]
 
 
 func _rotate_subtree(index: int, angle: float) -> void:
@@ -304,6 +313,7 @@ func begin_grab(bone: int, t: float, point: Vector2) -> void:
 	grab_t = t
 	grab_target = point
 	sleeping = false
+	_rest_steps = 0
 
 
 func end_grab() -> void:
@@ -324,7 +334,7 @@ func is_resting() -> bool:
 	var energy := 0.0
 	for p in pos.size():
 		energy += (pos[p] - prev[p]).length_squared()
-	return energy < 0.02
+	return energy < 0.2
 
 
 func sync_from_pose_from_pos() -> void:

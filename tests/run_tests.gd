@@ -325,6 +325,26 @@ func _test_physics() -> void:
 			bounded = false
 	_check(bounded, "PBD stays inside screen bounds")
 
+	var drop := RagdollSolver.new()
+	drop.build(definition)
+	var drop_pose := definition.create_rest_pose()
+	drop_pose.root_pos = Vector2(500.0, 300.0)
+	RigState.resolve(definition, drop_pose)
+	drop.start_from_pose(drop_pose, 900.0, 0.0, 1000.0)
+	var pelvis := int(definition.joint_index[&"pelvis"])
+	var low := INF
+	var high := -INF
+	for i in 600:
+		drop.step(1.0 / 120.0)
+		if i > 540:
+			low = minf(low, drop.pos[pelvis].y)
+			high = maxf(high, drop.pos[pelvis].y)
+	_check(high - low < 2.0, "PBD settles without bounce")
+	var max_speed := 0.0
+	for i in drop.pos.size():
+		max_speed = maxf(max_speed, drop.pos[i].distance_to(drop.prev[i]) * 120.0)
+	_check(max_speed < 40.0, "PBD residual speed")
+
 
 func _test_passthrough() -> void:
 	var definition := RigDefinition.new()
