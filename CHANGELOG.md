@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
@@ -26,7 +26,7 @@
 - 7 个 OGG 音效入库（脚步/落地/挥动/坐下/挥手/鼓掌/弹出）
 - 挥手 whoosh 重命名为 `sfx_wave_whoosh.ogg`，抛出音效待补
 - `sfx_wave.ogg` 设为循环，用作连续挥手
-- P0 工程基线测试 150 项，替换占位测试入口
+- P0 工程基线测试 152 项，替换占位测试入口
 - `gate -Full` 增加主场景启动冒烟
 - 真实 Windows exe 导出成功（首版 117.92MB，P1 版 117.96MB），exe 冒烟退出 0
 - GitHub Actions 跑通，P0 工程基线 100% 完成

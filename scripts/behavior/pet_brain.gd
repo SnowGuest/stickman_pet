@@ -22,6 +22,9 @@ var look_angle: float = 0.0
 var energy: float = 0.85
 var boredom: float = 0.15
 var curiosity: float = 0.60
+var activity_name: String = "breathe"
+
+var _recent_states: Array[State] = []
 
 
 func body_bob() -> float:
@@ -105,6 +108,15 @@ func _enter(next_state: State) -> void:
 	state = next_state
 	state_time = 0.0
 	look_angle = 0.0
+	activity_name = {
+		State.IDLE: "breathe",
+		State.WALK: "patrol",
+		State.WAVE: "greet",
+		State.LOOK: "scan",
+	}[next_state]
+	_recent_states.append(next_state)
+	if _recent_states.size() > 3:
+		_recent_states.pop_front()
 	var duration_range: Vector2 = DURATION_RANGES[next_state]
 	_duration = _rng.randf_range(duration_range.x, duration_range.y)
 	var clip := StringName(CLIP_BY_STATE[next_state])
@@ -120,6 +132,8 @@ func _pick_next() -> State:
 	for option in options:
 		var next_state: State = option[0]
 		var weight := float(option[1])
+		if next_state in _recent_states:
+			weight *= 0.25
 		match next_state:
 			State.WALK:
 				weight *= (0.65 + boredom * 0.8) * (0.6 + energy)

@@ -294,8 +294,10 @@ func _test_brain() -> void:
 	var brain := PetBrain.new()
 	brain.setup(player, 7)
 	_check(brain.state == PetBrain.State.IDLE, "brain starts idle")
+	_check(brain.activity_name == "breathe", "brain names idle activity")
 	brain.force(PetBrain.State.WAVE)
 	_check(brain.state == PetBrain.State.WAVE, "brain force state")
+	_check(brain.activity_name == "greet", "brain names wave activity")
 	for i in 180:
 		brain.tick(1.0 / 60.0)
 	_check(brain.state == PetBrain.State.WAVE, "forced brain holds state")
