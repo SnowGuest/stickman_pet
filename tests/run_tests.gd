@@ -449,6 +449,25 @@ func _test_physics() -> void:
 			joint_error = maxf(joint_error, absf(length - b.length))
 		_check(joint_error < 1.0, "joint grab keeps bone length")
 		joint_ctrl.free()
+
+	var stop_ctrl := PhysicsController.new()
+	stop_ctrl.setup(definition)
+	var stop_pose := definition.create_rest_pose()
+	stop_pose.root_pos = Vector2(500.0, 500.0)
+	RigState.resolve(definition, stop_pose)
+	var hand := definition.joint_pos(stop_pose, &"hand_l")
+	stop_ctrl.start_with_pose(stop_pose, hand, 900.0, 0.0, 1000.0)
+	for i in 60:
+		stop_ctrl.drag(hand + Vector2(sin(i * 0.3) * 100.0, 0.0))
+		stop_ctrl.tick(1.0 / 60.0, stop_pose)
+	for i in 60:
+		stop_ctrl.tick(1.0 / 60.0, stop_pose)
+	var stop_speed := 0.0
+	for i in stop_ctrl.solver.pos.size():
+		stop_speed = maxf(stop_speed,
+				stop_ctrl.solver.pos[i].distance_to(stop_ctrl.solver.prev[i]) * 120.0)
+	_check(stop_speed < 30.0, "grab settles after mouse stops")
+	stop_ctrl.free()
 	controller.free()
 
 

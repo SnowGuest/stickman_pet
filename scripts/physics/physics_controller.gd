@@ -20,6 +20,9 @@ var _grab_smooth: Vector2 = Vector2.ZERO
 var _grab_relative: PackedVector2Array = PackedVector2Array()
 var grab_smoothing: float = 14.0
 var grab_stabilization: float = 0.0
+var grab_still_delay: float = 0.08
+var grab_still_damping: float = 0.10
+var _since_drag: float = 1.0
 
 
 func setup(p_definition: RigDefinition) -> void:
@@ -60,6 +63,7 @@ func begin_drag(local: Vector2, floor: float, left: float, right: float) -> bool
 		_grab_relative[i] = solver.pos[i] - point
 	_velocity = Vector2.ZERO
 	_last_delta = 1.0 / 60.0
+	_since_drag = 1.0
 	grabbing = true
 	solver.floor_y = floor
 	solver.wall_l = left
@@ -80,6 +84,7 @@ func drag(local: Vector2) -> void:
 	_last_target = local
 	_last_delta = 1.0 / 60.0
 	_grab_raw = local + _grab_offset
+	_since_drag = 0.0
 
 
 func end_drag() -> void:
@@ -120,9 +125,15 @@ func tick(dt: float, pose: RigPose) -> void:
 	if _render_prev.size() != solver.pos.size():
 		_render_prev = solver.pos.duplicate()
 	if grabbing:
-		_grab_smooth = _grab_smooth.lerp(_grab_raw,
-				1.0 - exp(-grab_smoothing * dt))
-		solver.grab_target = _grab_smooth
+		_since_drag += dt
+		if _since_drag > grab_still_delay:
+			# 鼠标停住后快速收掉残余速度，避免关节惯性在抓点附近抽动。
+			solver.grab_target = _grab_raw
+			solver.damp_velocities(grab_still_damping)
+		else:
+			_grab_smooth = _grab_smooth.lerp(_grab_raw,
+					1.0 - exp(-grab_smoothing * dt))
+			solver.grab_target = _grab_smooth
 	_acc += minf(dt, 1.0 / 30.0)
 	var guard := 0
 	while _acc >= H and guard < 4:

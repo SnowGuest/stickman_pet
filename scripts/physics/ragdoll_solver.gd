@@ -368,6 +368,12 @@ func end_grab() -> void:
 	grab_bone = -1
 
 
+func damp_velocities(factor: float) -> void:
+	for p in pos.size():
+		var velocity := (pos[p] - prev[p]) * factor
+		prev[p] = pos[p] - velocity
+
+
 func apply_velocity(bone: int, t: float, velocity: Vector2, h: float) -> void:
 	if bone < 0:
 		return
