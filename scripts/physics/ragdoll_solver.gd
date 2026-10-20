@@ -18,7 +18,8 @@ var subtree: Array[PackedInt32Array] = []
 var grab_bone: int = -1
 var grab_t: float = 0.5
 var grab_target: Vector2 = Vector2.ZERO
-var grab_strength: float = 0.55
+var grab_strength: float = 0.32
+var grab_angular_damping: float = 0.04
 
 var gravity: float = 1500.0
 var damping: float = 0.990
@@ -135,9 +136,21 @@ func step(h: float) -> void:
 	# 抓取点最后再收一次，保证指针位置优先于骨长残差。
 	for _i in 8:
 		_solve_grab()
+	# 最后的距离/抓取可能再次把骨骼推过限位，收尾强制角度限位。
+	_solve_angles()
+	_solve_distances()
 	# 所有约束结束后再做一次硬边界夹取，任何约束都不能把角色推出屏幕。
 	_solve_collisions()
 	_clamp_bounds()
+	if grab_bone >= 0:
+		# 抓住时只耗散绕抓点的切向速度，抑制无质量自旋，保留整体摆动。
+		for p in pos.size():
+			var radius_vec := pos[p] - grab_target
+			if radius_vec.length_squared() < 1.0:
+				continue
+			var tangent := Vector2(-radius_vec.y, radius_vec.x).normalized()
+			var velocity := pos[p] - prev[p]
+			prev[p] += tangent * velocity.dot(tangent) * grab_angular_damping
 	# 约束求解会注入额外速度；松手状态下每步再耗散一部分，避免“果冻/皮球”感。
 	if grab_bone < 0:
 		var supported := is_supported()

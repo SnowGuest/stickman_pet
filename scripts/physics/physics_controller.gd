@@ -17,7 +17,7 @@ var _last_delta: float = 1.0 / 60.0
 var _render_prev: PackedVector2Array = PackedVector2Array()
 var _grab_raw: Vector2 = Vector2.ZERO
 var _grab_smooth: Vector2 = Vector2.ZERO
-var grab_smoothing: float = 18.0
+var grab_smoothing: float = 7.0
 
 
 func setup(p_definition: RigDefinition) -> void:

@@ -324,7 +324,23 @@ func _test_physics() -> void:
 				or solver.pos[i].y > solver.floor_y - r + 0.01:
 			bounded = false
 	_check(bounded, "PBD stays inside screen bounds")
-
+	var max_violation := 0.0
+	for i in definition.bones.size():
+		var b := definition.bones[i]
+		var cdir := solver.pos[b.end_idx] - solver.pos[b.start_idx]
+		if cdir.length_squared() < 1e-8:
+			continue
+		var pdir := Vector2.from_angle(0.0)
+		if b.parent_index >= 0:
+			var pb := definition.bones[b.parent_index]
+			pdir = solver.pos[pb.end_idx] - solver.pos[pb.start_idx]
+		var rel := wrapf(cdir.angle() - pdir.angle(), -PI, PI)
+		var lo := solver.limit_lo[i]
+		var hi := solver.limit_hi[i]
+		if hi - lo <= PI * 1.5:
+			max_violation = maxf(max_violation,
+					maxf(lo - rel, rel - hi))
+	_check(max_violation < 0.05, "PBD joint limits hold")
 	var drop := RagdollSolver.new()
 	drop.build(definition)
 	var drop_pose := definition.create_rest_pose()
@@ -371,6 +387,27 @@ func _test_physics() -> void:
 	for i in 120:
 		controller.tick(1.0 / 60.0, held_pose)
 	_check(controller.solver.is_supported(), "release reaches floor")
+
+	var lift := PhysicsController.new()
+	lift.setup(definition)
+	var lift_pose := definition.create_rest_pose()
+	lift_pose.root_pos = Vector2(500.0, 500.0)
+	RigState.resolve(definition, lift_pose)
+	var lift_chest := definition.joint_pos(lift_pose, &"chest")
+	lift.start_with_pose(lift_pose, lift_chest, 900.0, 0.0, 1000.0)
+	var lift_start := (lift.solver.pos[int(definition.joint_index[&"chest"])]
+			- lift.solver.pos[int(definition.joint_index[&"pelvis"])]).angle()
+	var lift_last := lift_start
+	var lift_turn := 0.0
+	for i in 90:
+		lift.drag(lift_chest + Vector2(0.0, -220.0))
+		lift.tick(1.0 / 60.0, lift_pose)
+		var a := (lift.solver.pos[int(definition.joint_index[&"chest"])]
+				- lift.solver.pos[int(definition.joint_index[&"pelvis"])]).angle()
+		lift_turn += wrapf(a - lift_last, -PI, PI)
+		lift_last = a
+	_check(absf(lift_turn) < 0.6, "lift does not self-spin")
+	lift.free()
 	controller.free()
 
 
