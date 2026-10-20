@@ -10,7 +10,6 @@ var renderer: StickRenderer
 var passthrough: PassthroughService
 var debug: DebugOverlay
 var tray: TrayService
-var global_mouse: GlobalMouse
 var grab_probe: GrabProbe
 var panel: FloatPanel
 var anim_library: AnimLibrary
@@ -123,13 +122,10 @@ func _ready() -> void:
 	if not screenshot_mode and tray.setup():
 		tray.command_received.connect(_on_tray_command)
 
-	global_mouse = GlobalMouse.new()
-	add_child(global_mouse)
-	global_mouse.setup(tray.get_mouse_path())
 	if grab_probe_mode:
 		grab_probe = GrabProbe.new()
 		add_child(grab_probe)
-		grab_probe.setup(shell, definition, pose, renderer, global_mouse)
+		grab_probe.setup(shell, definition, pose, renderer)
 
 	if screenshot_mode:
 		await get_tree().process_frame

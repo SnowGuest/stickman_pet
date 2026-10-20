@@ -5,32 +5,15 @@ var _shell: DesktopShell
 var _definition: RigDefinition
 var _pose: RigPose
 var _renderer: StickRenderer
-var _mouse: GlobalMouse
-var _last_down: bool = false
-var _last_screen: Vector2 = Vector2.INF
 
 
 func setup(shell: DesktopShell, definition: RigDefinition, pose: RigPose,
-		renderer: StickRenderer, mouse: GlobalMouse) -> void:
+		renderer: StickRenderer) -> void:
 	_shell = shell
 	_definition = definition
 	_pose = pose
 	_renderer = renderer
-	_mouse = mouse
 	_write_target()
-
-
-func _process(_dt: float) -> void:
-	if _mouse == null or not _mouse.has_state():
-		return
-	if _mouse.is_down and not _last_down:
-		_probe(_mouse.pos)
-	_last_down = _mouse.is_down
-
-
-func _probe(screen: Vector2) -> void:
-	var local := _shell.global_to_local(screen)
-	_write_result(screen, local)
 
 
 func _write_result(screen: Vector2, local: Vector2) -> void:

@@ -21,7 +21,7 @@
 - 7 个 OGG 音效入库（脚步/落地/挥动/坐下/挥手/鼓掌/弹出）
 - 挥手 whoosh 重命名为 `sfx_wave_whoosh.ogg`，抛出音效待补
 - `sfx_wave.ogg` 设为循环，用作连续挥手
-- P0 工程基线测试 143 项，替换占位测试入口
+- P0 工程基线测试 140 项，替换占位测试入口
 - `gate -Full` 增加主场景启动冒烟
 - 真实 Windows exe 导出成功（首版 117.92MB，P1 版 117.96MB），exe 冒烟退出 0
 - GitHub Actions 跑通，P0 工程基线 100% 完成
@@ -69,6 +69,11 @@
 - 中文字体：Noto Sans SC（OFL 1.1）与全局 Theme
 - 发布构建脚本：staging 排除 `addons/godot_ai`、移除 `_mcp_game_helper`
 - 分级文档：总览 / 平台 / 仿真 / 表现 / 行为 / 工程 / 附录
+
+### Removed
+
+- 移除 `GlobalMouse`/全局按键轮询与 `GrabProbe` 外部按住交互；只保留角色上的鼠标按住拖动
+- C# 托盘 helper 不再写 `stickman_mouse.txt`
 
 ### Changed
 
