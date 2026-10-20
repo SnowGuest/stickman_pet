@@ -43,6 +43,11 @@ func _ready() -> void:
 	for arg in args:
 		if arg.begins_with("--dpi="):
 			dpi_override = float(arg.trim_prefix("--dpi="))
+		elif arg.begins_with("--palette="):
+			var requested := arg.trim_prefix("--palette=")
+			var found := PALETTE_ORDER.find(requested)
+			if found >= 0:
+				palette_index = found
 
 	single = SingleInstance.new()
 	if not single.acquire():

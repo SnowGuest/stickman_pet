@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
@@ -15,6 +15,7 @@
 - SDF 双臂改为二次贝塞尔曲线，肘部自然弯折、手部随摆
 - 站立双腿从骨盆单点分出：左 120°、右 60°，形成参考图的自然跨步
 - 2D/3D 火柴人加回 L 形双脚：双脚朝同一方向，脚长从 10 缩短到 3
+- 空心头不画 L 脚；实心头头径为空心头的 3/4 并保留 L 脚
 - P6 绿色版：`tools/package_release.ps1` 生成 zip + SHA256；180s soak
 - 版本迭代目录：v0.1.0–v1.0.0 的迭代说明与更新记录
 - README：开源项目介绍、状态、路线图与快速开始
@@ -30,7 +31,7 @@
 - 7 个 OGG 音效入库（脚步/落地/挥动/坐下/挥手/鼓掌/弹出）
 - 挥手 whoosh 重命名为 `sfx_wave_whoosh.ogg`，抛出音效待补
 - `sfx_wave.ogg` 设为循环，用作连续挥手
-- P0 工程基线测试 157 项，替换占位测试入口
+- P0 工程基线测试 161 项，替换占位测试入口
 - `gate -Full` 增加主场景启动冒烟
 - 真实 Windows exe 导出成功（首版 117.92MB，P1 版 117.96MB），exe 冒烟退出 0
 - GitHub Actions 跑通，P0 工程基线 100% 完成

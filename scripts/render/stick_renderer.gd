@@ -97,11 +97,19 @@ func set_palette(palette: Dictionary, palette_name: String) -> void:
 	_stroke.default_color = palette_color
 	_layer_back.default_color = palette_color
 	_layer_front.default_color = palette_color
-	_head.configure(definition.head_radius, palette_color, head_hollow,
+	_head.configure(_effective_head_radius(), palette_color, head_hollow,
 			definition.head_line_width)
 	if _sdf_material != null:
 		_sdf_material.set_shader_parameter("stroke_color", palette_color)
 		_sdf_material.set_shader_parameter("head_hollow", head_hollow)
+
+
+func _effective_head_radius() -> float:
+	return definition.head_radius * (1.0 if head_hollow else 0.75)
+
+
+func _has_l_feet() -> bool:
+	return not head_hollow
 
 
 func sync(p_pose: RigPose) -> void:
@@ -119,7 +127,8 @@ func sync(p_pose: RigPose) -> void:
 	else:
 		_stroke.points = _build_path(pose)
 	var neck := pose.joint_pos[int(definition.joint_index[&"neck_top"])]
-	_head.position = neck - pose.root_pos + Vector2(0.0, -definition.head_radius)
+	_head.position = neck - pose.root_pos + Vector2(0.0,
+			-_effective_head_radius())
 
 
 func _sync_sdf(p: RigPose) -> void:
@@ -127,6 +136,8 @@ func _sync_sdf(p: RigPose) -> void:
 	var segments := PackedVector4Array()
 	for b in definition.bones:
 		if b.id in [&"upper_arm_l", &"forearm_l", &"upper_arm_r", &"forearm_r"]:
+			continue
+		if (b.id == &"foot_l" or b.id == &"foot_r") and not _has_l_feet():
 			continue
 		var start := _joint_screen(p, b.start_idx)
 		var end := _joint_screen(p, b.end_idx)
@@ -136,16 +147,19 @@ func _sync_sdf(p: RigPose) -> void:
 	_append_arm_curve(segments, p, &"upper_arm_l", &"forearm_l")
 	_append_arm_curve(segments, p, &"upper_arm_r", &"forearm_r")
 	var neck := _joint_screen(p, definition.joint_index[&"neck_top"])
-	var head_center := neck + Vector2(0.0, -definition.head_radius *
+	var head_center := neck + Vector2(0.0, -_effective_head_radius() *
 			_view_scale)
 	_sdf_material.set_shader_parameter("screen_size", view_size)
 	for i in segments.size():
 		_sdf_material.set_shader_parameter("seg%d" % i, segments[i])
+	for i in range(segments.size(), 17):
+		_sdf_material.set_shader_parameter("seg%d" % i,
+				Vector4(-1000.0, -1000.0, -1000.0, -1000.0))
 	_sdf_material.set_shader_parameter("line_radius",
 			definition.line_width * _view_scale * 0.5)
 	_sdf_material.set_shader_parameter("head_center", head_center)
 	_sdf_material.set_shader_parameter("head_radius",
-			definition.head_radius * _view_scale)
+			_effective_head_radius() * _view_scale)
 	_sdf_material.set_shader_parameter("head_half_width",
 			definition.head_line_width * _view_scale * 0.5)
 
@@ -187,8 +201,9 @@ func _build_back_path(p: RigPose) -> PackedVector2Array:
 	_append(points, p, &"pelvis")
 	_append(points, p, &"knee_l")
 	_append(points, p, &"ankle_l")
-	_append_short_toe(points, p, &"ankle_l", &"toe_l", false)
-	_append(points, p, &"ankle_l")
+	if _has_l_feet():
+		_append_short_toe(points, p, &"ankle_l", &"toe_l", false)
+		_append(points, p, &"ankle_l")
 	return PackedVector2Array(points)
 
 
@@ -206,6 +221,9 @@ func _build_front_path(p: RigPose) -> PackedVector2Array:
 	_append(points, p, &"pelvis")
 	_append(points, p, &"knee_r")
 	_append(points, p, &"ankle_r")
+	if _has_l_feet():
+		_append_short_toe(points, p, &"ankle_r", &"toe_r", false)
+		_append(points, p, &"ankle_r")
 	_append(points, p, &"knee_r")
 	_append(points, p, &"pelvis")
 	_append(points, p, &"chest")
@@ -224,14 +242,16 @@ func _build_path(p: RigPose) -> PackedVector2Array:
 	_append(points, p, &"pelvis")
 	_append(points, p, &"knee_l")
 	_append(points, p, &"ankle_l")
-	_append_short_toe(points, p, &"ankle_l", &"toe_l", false)
-	_append(points, p, &"ankle_l")
+	if _has_l_feet():
+		_append_short_toe(points, p, &"ankle_l", &"toe_l", false)
+		_append(points, p, &"ankle_l")
 	_append(points, p, &"knee_l")
 	_append(points, p, &"pelvis")
 	_append(points, p, &"knee_r")
 	_append(points, p, &"ankle_r")
-	_append_short_toe(points, p, &"ankle_r", &"toe_r", false)
-	_append(points, p, &"ankle_r")
+	if _has_l_feet():
+		_append_short_toe(points, p, &"ankle_r", &"toe_r", false)
+		_append(points, p, &"ankle_r")
 	_append(points, p, &"knee_r")
 	_append(points, p, &"pelvis")
 	_append(points, p, &"chest")
