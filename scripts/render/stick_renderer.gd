@@ -135,7 +135,8 @@ func _sync_sdf(p: RigPose) -> void:
 	var view_size := get_viewport().get_visible_rect().size
 	var segments := PackedVector4Array()
 	for b in definition.bones:
-		if b.id in [&"upper_arm_l", &"forearm_l", &"upper_arm_r", &"forearm_r"]:
+		if b.id in [&"upper_arm_l", &"forearm_l", &"upper_arm_r", &"forearm_r",
+				&"thigh_l", &"shin_l", &"thigh_r", &"shin_r"]:
 			continue
 		if (b.id == &"foot_l" or b.id == &"foot_r") and not _has_l_feet():
 			continue
@@ -146,13 +147,15 @@ func _sync_sdf(p: RigPose) -> void:
 		segments.append(Vector4(start.x, start.y, end.x, end.y))
 	_append_arm_curve(segments, p, &"upper_arm_l", &"forearm_l")
 	_append_arm_curve(segments, p, &"upper_arm_r", &"forearm_r")
+	_append_leg_curve(segments, p, &"thigh_l", &"shin_l")
+	_append_leg_curve(segments, p, &"thigh_r", &"shin_r")
 	var neck := _joint_screen(p, definition.joint_index[&"neck_top"])
 	var head_center := neck + Vector2(0.0, -_effective_head_radius() *
 			_view_scale)
 	_sdf_material.set_shader_parameter("screen_size", view_size)
 	for i in segments.size():
 		_sdf_material.set_shader_parameter("seg%d" % i, segments[i])
-	for i in range(segments.size(), 17):
+	for i in range(segments.size(), 21):
 		_sdf_material.set_shader_parameter("seg%d" % i,
 				Vector4(-1000.0, -1000.0, -1000.0, -1000.0))
 	_sdf_material.set_shader_parameter("line_radius",
@@ -189,6 +192,24 @@ func _append_arm_curve(segments: PackedVector4Array, p: RigPose,
 		var t := float(step + 1) / 4.0
 		var point := (shoulder * pow(1.0 - t, 2.0)
 				+ elbow * 2.0 * (1.0 - t) * t + hand * t * t)
+		segments.append(Vector4(prev.x, prev.y, point.x, point.y))
+		prev = point
+
+
+func _append_leg_curve(segments: PackedVector4Array, p: RigPose,
+		thigh_id: StringName, shin_id: StringName) -> void:
+	var thigh_index := _bone_index(thigh_id)
+	var shin_index := _bone_index(shin_id)
+	if thigh_index < 0 or shin_index < 0:
+		return
+	var hip := _joint_screen(p, definition.bones[thigh_index].start_idx)
+	var knee := _joint_screen(p, definition.bones[thigh_index].end_idx)
+	var ankle := _joint_screen(p, definition.bones[shin_index].end_idx)
+	var prev := hip
+	for step in 4:
+		var t := float(step + 1) / 4.0
+		var point := (hip * pow(1.0 - t, 2.0)
+				+ knee * 2.0 * (1.0 - t) * t + ankle * t * t)
 		segments.append(Vector4(prev.x, prev.y, point.x, point.y))
 		prev = point
 

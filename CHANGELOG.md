@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
@@ -14,6 +14,9 @@
 - 默认 SDF 笔画：13 骨胶囊并集 + 空心头圆环，`--line` 回退单笔 Line2D
 - SDF 双臂改为二次贝塞尔曲线，肘部自然弯折、手部随摆
 - 站立双腿从骨盆单点分出：左 120°、右 60°，形成参考图的自然跨步
+- 躯干脊柱长度 30 → 38，身体更修长
+- 删除地面阴影节点，透明窗口只保留纯色角色
+- 双腿改为与手臂相同的二次贝塞尔 SDF 曲线，膝部不再硬折
 - 2D/3D 火柴人加回 L 形双脚：双脚朝同一方向，脚长从 10 缩短到 3
 - 空心头不画 L 脚；实心头头径为空心头的 3/4 并保留 L 脚
 - P6 绿色版：`tools/package_release.ps1` 生成 zip + SHA256；180s soak

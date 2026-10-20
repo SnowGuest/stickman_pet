@@ -33,7 +33,7 @@
       "parent": "",
       "start_joint": "pelvis",
       "end_joint": "chest",
-      "length": 30.0,
+      "length": 38.0,
       "rest_abs_deg": -90.0,
       "limit_lo_deg": -22.0,
       "limit_hi_deg": 22.0,

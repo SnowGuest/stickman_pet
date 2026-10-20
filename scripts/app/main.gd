@@ -13,7 +13,6 @@ var tray: TrayService
 var anim_library: AnimLibrary
 var anim_player: AnimPlayer
 var brain: PetBrain
-var shadow: PetShadow
 var audio: AudioService
 
 var palette_data: Dictionary = {}
@@ -74,9 +73,6 @@ func _ready() -> void:
 			shell.dpi_scale)
 	renderer.set_layered(layered_mode)
 	renderer.set_sdf(sdf_mode)
-	shadow = PetShadow.new()
-	add_child(shadow)
-	shadow.setup(shell.local_floor_y(), renderer.get_view_scale())
 
 	anim_library = AnimLibrary.new()
 	if not anim_library.load_dir("res://assets/anims", definition):
@@ -239,8 +235,6 @@ func _process(dt: float) -> void:
 		RigState.resolve(definition, pose)
 		_apply_brain_tilt()
 		renderer.sync(pose)
-		if shadow != null:
-			shadow.update_from_pose(pose, brain != null and brain.state == PetBrain.State.WALK)
 	if passthrough != null:
 		passthrough.tick(dt, definition, pose, renderer.get_view_scale())
 
@@ -260,9 +254,6 @@ func _apply_layout() -> void:
 	RigState.resolve(definition, pose)
 	_apply_brain_tilt()
 	renderer.sync(pose)
-	if shadow != null:
-		shadow.floor_y = shell.local_floor_y()
-		shadow.update_from_pose(pose, brain != null and brain.state == PetBrain.State.WALK)
 	if passthrough != null and not context_open:
 		passthrough.unlock()
 		passthrough.tick(0.0, definition, pose, renderer.get_view_scale())
