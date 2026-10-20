@@ -430,6 +430,8 @@ func pick(point: Vector2) -> Array:
 				return [neck_bone, 1.0, 0.0, offset]
 
 	var best := [-1, 0.0, INF, Vector2.ZERO]
+	var best_priority := -1
+	var priority_slack := 14.0 * view_scale
 	for i in def.bones.size():
 		var b := def.bones[i]
 		var a := pos[b.start_idx]
@@ -439,9 +441,33 @@ func pick(point: Vector2) -> Array:
 				0.0, 1.0)
 		var d := point.distance_to(a + ab * t)
 		var r := maxf(b.width * 2.4, 12.0) * view_scale
-		if d <= r and d < best[2]:
+		if d > r:
+			continue
+		var priority := _pick_priority(b.id)
+		var better := false
+		if best[0] < 0:
+			better = true
+		elif priority > best_priority and d <= best[2] + priority_slack:
+			# 肘/膝与躯干重叠时，优先抓肢体，避免点肘却抓到躯干。
+			better = true
+		elif priority == best_priority and d < best[2]:
+			better = true
+		if better:
 			best = [i, t, d, Vector2.ZERO]
+			best_priority = priority
 	return best
+
+
+func _pick_priority(bone_id: StringName) -> int:
+	if bone_id in [&"upper_arm_l", &"upper_arm_r",
+			&"forearm_l", &"forearm_r",
+			&"thigh_l", &"thigh_r", &"shin_l", &"shin_r"]:
+		return 3
+	if bone_id in [&"neck", &"head"]:
+		return 2
+	if bone_id == &"spine":
+		return 1
+	return 0
 
 
 func begin_grab(bone: int, t: float, point: Vector2,

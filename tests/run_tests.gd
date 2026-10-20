@@ -390,6 +390,16 @@ func _test_physics() -> void:
 	_check(head_hit.size() > 3 and (head_hit[3] as Vector2).length() > 0.0,
 			"head pick keeps circle offset")
 
+	var overlap_solver := RagdollSolver.new()
+	overlap_solver.build(definition)
+	overlap_solver.start_from_pose(pose, 900.0, 0.0, 1000.0)
+	var chest_joint := int(definition.joint_index[&"chest"])
+	var elbow_joint := int(definition.joint_index[&"elbow_l"])
+	overlap_solver.pos[elbow_joint] = overlap_solver.pos[chest_joint]
+	var overlap_hit := overlap_solver.pick(overlap_solver.pos[chest_joint])
+	_check(int(overlap_hit[0]) >= 0 and definition.bones[int(overlap_hit[0])].id in
+			[&"upper_arm_l", &"forearm_l"], "arm wins over torso when overlapping")
+
 	var controller := PhysicsController.new()
 	controller.setup(definition)
 	var held_pose := definition.create_rest_pose()
