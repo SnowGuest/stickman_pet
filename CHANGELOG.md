@@ -58,6 +58,7 @@
 - P3 停手防抽动：鼠标停住 80ms 后冻结求解器并清零速度，移动时唤醒
 - P3 人体限位：肘后弯 ≤20°/前屈 150°，膝 ≤90°/反向 ≤10°，spine/neck/head 收紧
 - P3 躯干/肩稳定：max_corr 0.20→0.12，移除 spine 世界扶正，抓取角阻尼 0.35
+- P3 颈/头稳定：neck/head 限位收紧到 ±10°，spine ±15°，抓颈不再抖
 - P3 坠落表演序列暂缓：移除 panic_fall/land/get_up，松手后恢复纯物理坠落
 - 托盘 helper 设置 `WS_EX_TOOLWINDOW`，隐藏 Alt+Tab/任务栏条目
 - 新增 `tools/test_alt_tab.ps1` 验收脚本

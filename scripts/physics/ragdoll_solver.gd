@@ -102,14 +102,14 @@ func build(definition: RigDefinition, p_view_scale: float = 1.0) -> void:
 				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(10.0)
 				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(90.0)
 			&"spine":
-				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(18.0)
-				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(18.0)
+				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(15.0)
+				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(15.0)
 			&"neck":
-				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(22.0)
-				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(22.0)
+				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(10.0)
+				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(10.0)
 			&"head":
-				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(18.0)
-				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(18.0)
+				limit_lo[i] = def.bones[i].rest_rel - deg_to_rad(10.0)
+				limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(10.0)
 			&"foot_l", &"foot_r":
 				# 脚骨不参与渲染，放开限位，避免脚部约束反向拉扯小腿。
 				limit_lo[i] = -PI
@@ -463,8 +463,6 @@ func _pick_priority(bone_id: StringName) -> int:
 			&"forearm_l", &"forearm_r",
 			&"thigh_l", &"thigh_r", &"shin_l", &"shin_r"]:
 		return 3
-	if bone_id in [&"neck", &"head"]:
-		return 2
 	if bone_id == &"spine":
 		return 1
 	return 0
