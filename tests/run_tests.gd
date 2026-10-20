@@ -345,6 +345,25 @@ func _test_physics() -> void:
 		max_speed = maxf(max_speed, drop.pos[i].distance_to(drop.prev[i]) * 120.0)
 	_check(max_speed < 40.0, "PBD residual speed")
 
+	var controller := PhysicsController.new()
+	controller.setup(definition)
+	var held_pose := definition.create_rest_pose()
+	held_pose.root_pos = Vector2(500.0, 500.0)
+	RigState.resolve(definition, held_pose)
+	var chest := definition.joint_pos(held_pose, &"chest")
+	var started := controller.start_with_pose(held_pose, chest, 900.0, 0.0, 1000.0)
+	_check(started, "physics controller starts grab")
+	for i in 180:
+		controller.tick(1.0 / 60.0, held_pose)
+	var held_y := held_pose.root_pos.y
+	controller.end_drag()
+	for i in 60:
+		controller.tick(1.0 / 60.0, held_pose)
+	_check(held_pose.root_pos.y > held_y + 10.0, "release falls after long hold")
+	_check(not controller.solver.sleeping or held_pose.root_pos.y > 800.0,
+			"release does not sleep mid-air")
+	controller.free()
+
 
 func _test_passthrough() -> void:
 	var definition := RigDefinition.new()

@@ -111,9 +111,11 @@ func tick(dt: float, pose: RigPose) -> void:
 		_acc -= H
 		solver.step(H)
 		guard += 1
-	if solver.is_resting():
+	if grabbing:
+		_rest_steps = 0
+	elif solver.is_supported() and solver.is_resting():
 		_rest_steps += 1
-		if _rest_steps >= 120 and not grabbing:
+		if _rest_steps >= 120:
 			solver.sleeping = true
 	else:
 		_rest_steps = 0
@@ -160,17 +162,13 @@ func _apply_tone(grab_bone: int) -> void:
 			&"foot_l": 0.04, &"foot_r": 0.04,
 		}
 	for i in definition.bones.size():
-		solver.tone[i] = float(profile.get(definition.bones[i].id, 0.02))
+		solver.tone[i] = float(profile.get(definition.bones[i].id, 0.02)) * 0.15
+		solver.world_bias[i] = 0.0
 	var spine_bone := -1
 	for i in definition.bones.size():
 		if definition.bones[i].id == &"spine":
 			spine_bone = i
 			break
-	if spine_bone >= 0:
-		if bone_id == &"neck" or bone_id == &"head":
-			solver.world_bias[spine_bone] = 0.15
-		elif bone_id in [&"thigh_l", &"thigh_r", &"shin_l", &"shin_r",
-				&"foot_l", &"foot_r"]:
-			solver.world_bias[spine_bone] = 0.30
-		else:
-			solver.world_bias[spine_bone] = 0.45
+	if spine_bone >= 0 and bone_id == &"spine":
+		# 只有抓腰时给躯干一点世界空间支撑；抓手/头/脚完全自由摆动。
+		solver.world_bias[spine_bone] = 0.35

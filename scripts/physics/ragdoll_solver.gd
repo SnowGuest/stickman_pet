@@ -132,10 +132,12 @@ func step(h: float) -> void:
 	_clamp_bounds()
 	# 约束求解会注入额外速度；松手状态下每步再耗散一部分，避免“果冻/皮球”感。
 	if grab_bone < 0:
+		var supported := is_supported()
+		var keep := 0.40 if supported else 0.95
 		for p in pos.size():
-			var velocity := (pos[p] - prev[p]) * 0.40
+			var velocity := (pos[p] - prev[p]) * keep
 			prev[p] = pos[p] - velocity
-		if is_resting():
+		if supported and is_resting():
 			_rest_steps += 1
 			if _rest_steps >= 60:
 				sleeping = true
@@ -335,6 +337,13 @@ func is_resting() -> bool:
 	for p in pos.size():
 		energy += (pos[p] - prev[p]).length_squared()
 	return energy < 0.2
+
+
+func is_supported() -> bool:
+	for p in pos.size():
+		if pos[p].y >= floor_y - radius[p] - 2.0:
+			return true
+	return false
 
 
 func sync_from_pose_from_pos() -> void:
