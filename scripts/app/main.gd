@@ -20,6 +20,10 @@ var palette_data: Dictionary = {}
 var palette_index: int = 1
 var _last_view_size: Vector2 = Vector2.ZERO
 var _base_root_y: float = 0.0
+var context_layer: CanvasLayer
+var context_root: Control
+var context_panel: PanelContainer
+var context_open: bool = false
 
 
 func _ready() -> void:
@@ -30,6 +34,7 @@ func _ready() -> void:
 	var safe_mode := args.has("--safe")
 	var no_passthrough := args.has("--no-passthrough")
 	var screenshot_mode := args.has("--screenshot") or args.has("--pet-screenshot")
+	var context_menu_mode := args.has("--context-menu")
 	var layered_mode := args.has("--layered")
 	var sdf_mode := not args.has("--line") and not layered_mode
 	var anim_override := &""
@@ -117,6 +122,9 @@ func _ready() -> void:
 	debug.animation_selected.connect(_on_animation_selected)
 	anim_player.clip_changed.connect(_on_anim_clip_changed)
 	_update_anim_highlight()
+	_build_context_menu()
+	if context_menu_mode:
+		call_deferred("_open_context_menu", Vector2(220.0, 180.0))
 
 	tray = TrayService.new()
 	add_child(tray)
@@ -255,7 +263,7 @@ func _apply_layout() -> void:
 	if shadow != null:
 		shadow.floor_y = shell.local_floor_y()
 		shadow.update_from_pose(pose, brain != null and brain.state == PetBrain.State.WALK)
-	if passthrough != null:
+	if passthrough != null and not context_open:
 		passthrough.unlock()
 		passthrough.tick(0.0, definition, pose, renderer.get_view_scale())
 
@@ -263,6 +271,117 @@ func _apply_layout() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
 		_apply_layout()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_RIGHT:
+		_open_context_menu(event.position)
+		get_viewport().set_input_as_handled()
+
+
+func _build_context_menu() -> void:
+	context_layer = CanvasLayer.new()
+	context_layer.name = "ContextMenuLayer"
+	context_layer.layer = 100
+	add_child(context_layer)
+	context_root = Control.new()
+	context_root.name = "ContextMenu"
+	context_root.mouse_filter = Control.MOUSE_FILTER_STOP
+	context_root.visible = false
+	context_layer.add_child(context_root)
+	context_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var backdrop := ColorRect.new()
+	backdrop.name = "Backdrop"
+	backdrop.color = Color(0.0, 0.0, 0.0, 0.001)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	context_root.add_child(backdrop)
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.gui_input.connect(_on_context_backdrop_input)
+
+	context_panel = PanelContainer.new()
+	context_panel.name = "Panel"
+	context_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	context_root.add_child(context_panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	context_panel.add_child(box)
+
+	for action in [["自动行为", "auto"], ["Idle", "idle"], ["Walk", "walk"],
+			["Wave", "wave"], ["Look", "look"]]:
+		_add_context_button(box, action[0], action[1])
+	box.add_child(HSeparator.new())
+	for palette_name in PALETTE_ORDER:
+		_add_context_button(box, palette_name, "palette_" + palette_name)
+	box.add_child(HSeparator.new())
+	_add_context_button(box, "调试面板", "debug")
+	_add_context_button(box, "退出", "quit")
+
+
+func _add_context_button(box: VBoxContainer, text: String, action: String) -> void:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(180.0, 28.0)
+	button.pressed.connect(_on_context_action.bind(action))
+	box.add_child(button)
+
+
+func _on_context_backdrop_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		_close_context_menu()
+
+
+func _on_context_action(action: String) -> void:
+	_close_context_menu()
+	match action:
+		"auto":
+			if brain != null:
+				brain.release_force()
+		"idle":
+			if brain != null:
+				brain.force(PetBrain.State.IDLE)
+		"walk":
+			if brain != null:
+				brain.force(PetBrain.State.WALK)
+		"wave":
+			if brain != null:
+				brain.force(PetBrain.State.WAVE)
+		"look":
+			if brain != null:
+				brain.force(PetBrain.State.LOOK)
+		"debug":
+			if debug != null:
+				debug.visible = not debug.visible
+		"quit":
+			get_tree().quit()
+		_:
+			if action.begins_with("palette_"):
+				_set_palette_by_name(action.trim_prefix("palette_"))
+
+
+func _open_context_menu(local_pos: Vector2) -> void:
+	if context_open or context_root == null:
+		return
+	context_open = true
+	context_root.visible = true
+	if passthrough != null:
+		passthrough.lock_full(get_viewport().get_visible_rect().size)
+	context_panel.reset_size()
+	var view_size := get_viewport().get_visible_rect().size
+	var panel_size := context_panel.size
+	context_panel.position = Vector2(
+			clampf(local_pos.x, 8.0, maxf(8.0, view_size.x - panel_size.x - 8.0)),
+			clampf(local_pos.y, 8.0, maxf(8.0, view_size.y - panel_size.y - 8.0)))
+
+
+func _close_context_menu() -> void:
+	if not context_open:
+		return
+	context_open = false
+	context_root.visible = false
+	if passthrough != null:
+		passthrough.unlock()
 
 
 func _on_palette_cycle() -> void:
