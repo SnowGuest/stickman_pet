@@ -140,6 +140,10 @@ func _sync_sdf(p: RigPose) -> void:
 		segments.append(Vector4(start.x, start.y, end.x, end.y))
 	_append_arm_curve(segments, p, &"upper_arm_l", &"forearm_l")
 	_append_arm_curve(segments, p, &"upper_arm_r", &"forearm_r")
+	var pelvis := _joint_screen(p, definition.joint_index[&"pelvis"])
+	var hip_half := 4.0 * _view_scale
+	segments.append(Vector4(pelvis.x - hip_half, pelvis.y,
+			pelvis.x + hip_half, pelvis.y))
 	var neck := _joint_screen(p, definition.joint_index[&"neck_top"])
 	var head_center := neck + Vector2(0.0, -definition.head_radius *
 			_view_scale)
