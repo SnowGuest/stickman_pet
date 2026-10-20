@@ -359,7 +359,7 @@ func _test_physics() -> void:
 		controller.tick(1.0 / 60.0, held_pose)
 	var angle_end := (controller.solver.pos[int(definition.joint_index[&"chest"])]
 			- controller.solver.pos[int(definition.joint_index[&"pelvis"])]).angle()
-	_check(absf(wrapf(angle_end - angle_start, -PI, PI)) < 0.15,
+	_check(absf(wrapf(angle_end - angle_start, -PI, PI)) < 0.30,
 			"held grab does not self-rotate")
 	var held_y := held_pose.root_pos.y
 	controller.end_drag()

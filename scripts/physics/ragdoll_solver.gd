@@ -11,6 +11,8 @@ var drive_rel: PackedFloat32Array = PackedFloat32Array()
 var tone: PackedFloat32Array = PackedFloat32Array()
 var world_bias: PackedFloat32Array = PackedFloat32Array()
 var bias_abs: PackedFloat32Array = PackedFloat32Array()
+var limit_lo: PackedFloat32Array = PackedFloat32Array()
+var limit_hi: PackedFloat32Array = PackedFloat32Array()
 var subtree: Array[PackedInt32Array] = []
 
 var grab_bone: int = -1
@@ -46,6 +48,8 @@ func build(definition: RigDefinition) -> void:
 	tone.resize(def.bones.size())
 	world_bias.resize(def.bones.size())
 	bias_abs.resize(def.bones.size())
+	limit_lo.resize(def.bones.size())
+	limit_hi.resize(def.bones.size())
 	for i in n:
 		inv_mass[i] = 0.0
 		radius[i] = 2.0
@@ -72,6 +76,10 @@ func build(definition: RigDefinition) -> void:
 	for i in def.bones.size():
 		drive_rel[i] = def.bones[i].rest_rel
 		tone[i] = 0.0
+		var min_limit := minf(def.bones[i].limit_lo_deg, def.bones[i].limit_hi_deg)
+		var max_limit := maxf(def.bones[i].limit_lo_deg, def.bones[i].limit_hi_deg)
+		limit_lo[i] = def.bones[i].rest_rel + deg_to_rad(min_limit)
+		limit_hi[i] = def.bones[i].rest_rel + deg_to_rad(max_limit)
 
 
 func sync_from_pose(pose: RigPose) -> void:
@@ -182,12 +190,8 @@ func _solve_distances() -> void:
 func _solve_angles() -> void:
 	for i in def.topo_order:
 		var b := def.bones[i]
-		# spine/thigh 的 parent 为空，其 rest/limit 是相对骨盆的旧表；
-		# P3 首版先让它们自由摆动，子骨骼仍受限位保护。
-		if b.parent_index < 0:
-			if b.id == &"spine" and world_bias[i] > 0.0:
-				_solve_world_bias(i, b)
-			continue
+		if b.parent_index < 0 and b.id == &"spine" and world_bias[i] > 0.0:
+			_solve_world_bias(i, b)
 		var cdir := pos[b.end_idx] - pos[b.start_idx]
 		if cdir.length_squared() < 1e-8:
 			continue
@@ -200,15 +204,18 @@ func _solve_angles() -> void:
 		if pdir.length_squared() < 1e-8:
 			continue
 		var rel := wrapf(cdir.angle() - pdir.angle(), -PI, PI)
+		var lo := limit_lo[i]
+		var hi := limit_hi[i]
+		var has_limit := hi - lo <= PI * 1.5
 		var target := clampf(drive_rel[i] if i < drive_rel.size() else b.rest_rel,
-				b.lo, b.hi)
+				lo, hi)
 		var err := 0.0
 		var k := 0.0
-		if rel < b.lo:
-			err = b.lo - rel
+		if has_limit and rel < lo:
+			err = lo - rel
 			k = 1.0
-		elif rel > b.hi:
-			err = b.hi - rel
+		elif has_limit and rel > hi:
+			err = hi - rel
 			k = 1.0
 		else:
 			err = wrapf(target - rel, -PI, PI)
@@ -244,9 +251,14 @@ func _solve_grab() -> void:
 	target.x = clampf(target.x, wall_l, wall_r)
 	target.y = clampf(target.y, ceiling_y, floor_y)
 	var delta := (target - cur) * grab_strength
-	var norm := 1.0 / maxf((1.0 - t) * (1.0 - t) + t * t, 1e-4)
-	pos[a] += delta * (1.0 - t) * norm
-	pos[c] += delta * t * norm
+	var wa := inv_mass[a]
+	var wc := inv_mass[c]
+	var denom := (1.0 - t) * (1.0 - t) * wa + t * t * wc
+	if denom <= 1e-5:
+		return
+	# 按两端逆质量分配修正：重的一端动得少，抓取有惯性感。
+	pos[a] += delta * (1.0 - t) * wa / denom
+	pos[c] += delta * t * wc / denom
 
 
 func _solve_collisions() -> void:

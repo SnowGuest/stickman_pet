@@ -15,6 +15,9 @@ var _last_target: Vector2 = Vector2.ZERO
 var _velocity: Vector2 = Vector2.ZERO
 var _last_delta: float = 1.0 / 60.0
 var _render_prev: PackedVector2Array = PackedVector2Array()
+var _grab_raw: Vector2 = Vector2.ZERO
+var _grab_smooth: Vector2 = Vector2.ZERO
+var grab_smoothing: float = 18.0
 
 
 func setup(p_definition: RigDefinition) -> void:
@@ -48,6 +51,8 @@ func begin_drag(local: Vector2, floor: float, left: float, right: float) -> bool
 	_apply_tone(bone)
 	_grab_offset = local - point
 	_last_target = local
+	_grab_raw = local
+	_grab_smooth = local
 	_velocity = Vector2.ZERO
 	_last_delta = 1.0 / 60.0
 	grabbing = true
@@ -69,7 +74,7 @@ func drag(local: Vector2) -> void:
 	_velocity = (local - _last_target) / maxf(_last_delta, 0.001)
 	_last_target = local
 	_last_delta = 1.0 / 60.0
-	solver.grab_target = local + _grab_offset
+	_grab_raw = local + _grab_offset
 
 
 func end_drag() -> void:
@@ -105,6 +110,10 @@ func tick(dt: float, pose: RigPose) -> void:
 		return
 	if _render_prev.size() != solver.pos.size():
 		_render_prev = solver.pos.duplicate()
+	if grabbing:
+		_grab_smooth = _grab_smooth.lerp(_grab_raw,
+				1.0 - exp(-grab_smoothing * dt))
+		solver.grab_target = _grab_smooth
 	_acc += minf(dt, 1.0 / 30.0)
 	var guard := 0
 	while _acc >= H and guard < 4:
