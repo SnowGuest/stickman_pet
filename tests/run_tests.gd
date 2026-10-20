@@ -17,6 +17,7 @@ func _initialize() -> void:
 	_test_rig()
 	_test_fk()
 	_test_animation()
+	_test_brain()
 	_test_physics()
 	_test_passthrough()
 	_test_renderer()
@@ -271,6 +272,30 @@ func _test_animation() -> void:
 		player.tick(1.0 / 60.0, pose)
 	_check(events.has("step_l"), "walk emits step_l")
 	_check(events.has("step_r"), "walk emits step_r")
+	player.free()
+
+
+func _test_brain() -> void:
+	var definition := RigDefinition.new()
+	definition.load_from_file("res://assets/rigs/stickman.json")
+	definition.compile()
+	var library := AnimLibrary.new()
+	library.load_dir("res://assets/anims", definition)
+	var player := AnimPlayer.new()
+	player.setup(definition, library)
+	var brain := PetBrain.new()
+	brain.setup(player, 7)
+	_check(brain.state == PetBrain.State.IDLE, "brain starts idle")
+	brain.force(PetBrain.State.WAVE)
+	_check(brain.state == PetBrain.State.WAVE, "brain force state")
+	for i in 180:
+		brain.tick(1.0 / 60.0)
+	_check(brain.state == PetBrain.State.WAVE, "forced brain holds state")
+	brain.release_force()
+	for i in 300:
+		brain.tick(1.0 / 60.0)
+	_check(brain.state != PetBrain.State.WAVE, "brain leaves wave")
+	brain.free()
 	player.free()
 
 

@@ -12,6 +12,7 @@ var debug: DebugOverlay
 var tray: TrayService
 var anim_library: AnimLibrary
 var anim_player: AnimPlayer
+var brain: PetBrain
 
 var palette_data: Dictionary = {}
 var palette_index: int = 1
@@ -68,6 +69,11 @@ func _ready() -> void:
 		anim_player.play(anim_override, 0.0)
 	if anim_time > 0.0 and anim_player.current != null:
 		anim_player.seek(anim_time / anim_player.current.length)
+
+	if anim_override == &"":
+		brain = PetBrain.new()
+		add_child(brain)
+		brain.setup(anim_player)
 
 	anim_player.event_fired.connect(func(event_name: String) -> void:
 		print("[anim] event=", event_name))
@@ -193,6 +199,8 @@ func _process(dt: float) -> void:
 		_apply_layout()
 	shell.poll(dt)
 	if anim_player != null:
+		if brain != null:
+			brain.tick(dt)
 		anim_player.tick(dt, pose)
 		RigState.resolve(definition, pose)
 		renderer.sync(pose)
