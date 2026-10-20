@@ -132,8 +132,6 @@ func _sync_sdf(p: RigPose) -> void:
 		var end := _joint_screen(p, b.end_idx)
 		if b.id == &"foot_l" or b.id == &"foot_r":
 			end = start + (end - start) * 0.6
-			if b.id == &"foot_l":
-				end.x = start.x * 2.0 - end.x
 		segments.append(Vector4(start.x, start.y, end.x, end.y))
 	_append_arm_curve(segments, p, &"upper_arm_l", &"forearm_l")
 	_append_arm_curve(segments, p, &"upper_arm_r", &"forearm_r")
@@ -189,7 +187,7 @@ func _build_back_path(p: RigPose) -> PackedVector2Array:
 	_append(points, p, &"pelvis")
 	_append(points, p, &"knee_l")
 	_append(points, p, &"ankle_l")
-	_append_short_toe(points, p, &"ankle_l", &"toe_l", true)
+	_append_short_toe(points, p, &"ankle_l", &"toe_l", false)
 	_append(points, p, &"ankle_l")
 	return PackedVector2Array(points)
 
@@ -226,7 +224,7 @@ func _build_path(p: RigPose) -> PackedVector2Array:
 	_append(points, p, &"pelvis")
 	_append(points, p, &"knee_l")
 	_append(points, p, &"ankle_l")
-	_append_short_toe(points, p, &"ankle_l", &"toe_l", true)
+	_append_short_toe(points, p, &"ankle_l", &"toe_l", false)
 	_append(points, p, &"ankle_l")
 	_append(points, p, &"knee_l")
 	_append(points, p, &"pelvis")

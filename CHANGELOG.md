@@ -13,8 +13,8 @@
 - P5 接触阴影 + 走路起伏/整体轻摆
 - 默认 SDF 笔画：13 骨胶囊并集 + 空心头圆环，`--line` 回退单笔 Line2D
 - SDF 双臂改为二次贝塞尔曲线，肘部自然弯折、手部随摆
-- 2D/3D 火柴人加回 L 形双脚：左脚向外、右脚向外，脚长从 10 缩短到 3
-- P6 绿色版：`tools/package_release.ps1` 生成 zip + SHA256；30s soak
+- 2D/3D 火柴人加回 L 形双脚：双脚朝同一方向，脚长从 10 缩短到 3
+- P6 绿色版：`tools/package_release.ps1` 生成 zip + SHA256；180s soak
 - 版本迭代目录：v0.1.0–v1.0.0 的迭代说明与更新记录
 - README：开源项目介绍、状态、路线图与快速开始
 - 最终产品定义：像 Alan Becker 的六条特征、体验剧本、表演层缺口
@@ -34,7 +34,7 @@
 - 真实 Windows exe 导出成功（首版 117.92MB，P1 版 117.96MB），exe 冒烟退出 0
 - GitHub Actions 跑通，P0 工程基线 100% 完成
 - P1：透明窗口 + 动态穿透 + 单实例 + 13 骨静态火柴人
-- 火柴人改为单条 Line2D 17 点一笔画，纯色、无白色/深色描边
+- 火柴人改为单条 Line2D 21 点一笔画，纯色、无白色/深色描边
 - P1 托盘 fallback：PowerShell NotifyIcon，缩放/退出命令可用
 - P1 原生托盘 helper：C# `TrayHelper.cs`，`build_release` 用 csc 编译
 - P1 GlobalMouse：C# 写状态文件，Godot 读取
