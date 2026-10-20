@@ -119,7 +119,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gate.ps1 -Full -Releas
 | CI | GitHub Actions 已跑通（2026-10-19，用户确认） |
 | 字体 | Noto Sans SC 可变字体，17.7MB，OFL，已接入全局 Theme |
 | 原生工具链 | .NET Framework `csc.exe` 可用；无 C++/Rust/CMake |
-| 当前阶段 | P2 95% + P4 35% + P5 20% + P6 35%；P3 移出计划 |
+| 当前阶段 | P2 95% + P4 35% + P5 20% + P6 40%；P3 移出计划 |
 
 环境事实变化时更新本表，不要在新会话里假设旧状态。
 
