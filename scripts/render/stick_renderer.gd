@@ -128,22 +128,13 @@ func _sync_sdf(p: RigPose) -> void:
 	for b in definition.bones:
 		if b.id in [&"upper_arm_l", &"forearm_l", &"upper_arm_r", &"forearm_r"]:
 			continue
-		var leg_offset := Vector2.ZERO
-		if str(b.id).begins_with("thigh") or str(b.id).begins_with("shin") \
-				or str(b.id).begins_with("foot"):
-			leg_offset.x = (-4.0 if str(b.id).ends_with("_l") else 4.0) \
-					* _view_scale
-		var start := _joint_screen(p, b.start_idx) + leg_offset
-		var end := _joint_screen(p, b.end_idx) + leg_offset
+		var start := _joint_screen(p, b.start_idx)
+		var end := _joint_screen(p, b.end_idx)
 		if b.id == &"foot_l" or b.id == &"foot_r":
 			end = start + (end - start) * 0.6
 		segments.append(Vector4(start.x, start.y, end.x, end.y))
 	_append_arm_curve(segments, p, &"upper_arm_l", &"forearm_l")
 	_append_arm_curve(segments, p, &"upper_arm_r", &"forearm_r")
-	var pelvis := _joint_screen(p, definition.joint_index[&"pelvis"])
-	var hip_half := 4.0 * _view_scale
-	segments.append(Vector4(pelvis.x - hip_half, pelvis.y,
-			pelvis.x + hip_half, pelvis.y))
 	var neck := _joint_screen(p, definition.joint_index[&"neck_top"])
 	var head_center := neck + Vector2(0.0, -definition.head_radius *
 			_view_scale)

@@ -20,7 +20,6 @@ uniform vec4 seg13;
 uniform vec4 seg14;
 uniform vec4 seg15;
 uniform vec4 seg16;
-uniform vec4 seg17;
 uniform float line_radius = 5.0;
 uniform vec2 head_center = vec2(-1000.0);
 uniform float head_radius = 18.0;
@@ -53,7 +52,6 @@ void fragment() {
 	d = min(d, segment_distance(p, seg14.xy, seg14.zw));
 	d = min(d, segment_distance(p, seg15.xy, seg15.zw));
 	d = min(d, segment_distance(p, seg16.xy, seg16.zw));
-	d = min(d, segment_distance(p, seg17.xy, seg17.zw));
 	float body = 1.0 - smoothstep(line_radius - 1.0, line_radius + 0.75, d);
 	float head_alpha = 0.0;
 	float head_d = distance(p, head_center);
